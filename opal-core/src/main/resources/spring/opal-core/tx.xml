@@ -5,17 +5,17 @@
 
   <tx:annotation-driven/>
 
-  <bean id="arjunaTransactionManager" class="com.arjuna.ats.jta.TransactionManager"
-      factory-method="transactionManager"/>
-
-  <bean id="arjunaUserTransaction" class="com.arjuna.ats.jta.UserTransaction" factory-method="userTransaction">
-    <!-- Set a very high timeout (10 days) -->
-    <property name="transactionTimeout" value="864000"/>
+  <!--  Bitronix Transaction Manager embedded configuration -->
+  <bean id="btmConfig" factory-method="getConfiguration" class="bitronix.tm.TransactionManagerServices">
+    <property name="serverId" value="opal-btm"/>
   </bean>
 
+  <bean id="bitronixTransactionManager" class="bitronix.tm.TransactionManagerServices"
+      factory-method="getTransactionManager" depends-on="btmConfig" destroy-method="shutdown"/>
+
   <bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
-    <property name="transactionManager" ref="arjunaTransactionManager"/>
-    <property name="userTransaction" ref="arjunaUserTransaction"/>
+    <property name="transactionManager" ref="bitronixTransactionManager"/>
+    <property name="userTransaction" ref="bitronixTransactionManager"/>
     <property name="allowCustomIsolationLevels" value="true"/>
   </bean>
 

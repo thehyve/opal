@@ -11,35 +11,35 @@ package org.obiba.opal.core.runtime.jdbc;
 
 import javax.annotation.Nonnull;
 import javax.sql.DataSource;
-import javax.transaction.TransactionManager;
 
-import org.apache.commons.dbcp.managed.BasicManagedDataSource;
 import org.obiba.opal.core.domain.database.SqlDatabase;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import bitronix.tm.resource.jdbc.PoolingDataSource;
 
 @Component
 public class DataSourceFactory {
 
-  @Autowired
-  private TransactionManager transactionManager;
+  public static final int MIN_POOL_SIZE = 3;
+
+  public static final int MAX_POOL_SIZE = 50;
 
   public DataSource createDataSource(@Nonnull SqlDatabase database) {
-    BasicManagedDataSource dataSource = new BasicManagedDataSource();
-    dataSource.setTransactionManager(transactionManager);
-    dataSource.setDriverClassName(database.getDriverClass());
-//    dataSource.setXADataSource("com.mysql.jdbc.jdbc2.optional.MysqlXADataSource");
-    dataSource.setUrl(database.getUrl());
-    dataSource.setUsername(database.getUsername());
-    dataSource.setPassword(database.getPassword());
-    dataSource.setInitialSize(3);
-    dataSource.setMaxActive(50);
-    dataSource.setDefaultAutoCommit(false);
+    PoolingDataSource dataSource = new PoolingDataSource();
+    dataSource.setUniqueName(database.getName());
+//    dataSource.setClassName(database.getDriverClass());
+    dataSource.setClassName("com.mysql.jdbc.jdbc2.optional.MysqlXADataSource");
+    dataSource.getDriverProperties().setProperty("url", database.getUrl());
+    dataSource.getDriverProperties().setProperty("user", database.getUsername());
+    dataSource.getDriverProperties().setProperty("password", database.getPassword());
+    dataSource.setMinPoolSize(MIN_POOL_SIZE);
+    dataSource.setMaxPoolSize(MAX_POOL_SIZE);
+    dataSource.setAllowLocalTransactions(true);
 
     if("com.mysql.jdbc.Driver".equals(database.getDriverClass())) {
-      dataSource.setValidationQuery("select 1");
+      dataSource.setTestQuery("select 1");
     } else if("org.hsqldb.jdbcDriver".equals(database.getDriverClass())) {
-      dataSource.setValidationQuery("select 1 from INFORMATION_SCHEMA.SYSTEM_USERS");
+      dataSource.setTestQuery("select 1 from INFORMATION_SCHEMA.SYSTEM_USERS");
     }
     //TODO validation query for PostgreSQL
 
