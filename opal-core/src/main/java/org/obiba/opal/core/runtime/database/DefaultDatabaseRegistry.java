@@ -1,5 +1,7 @@
 package org.obiba.opal.core.runtime.database;
 
+import java.sql.SQLException;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
@@ -7,6 +9,7 @@ import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import javax.validation.ConstraintViolationException;
 
+import org.apache.commons.dbcp.BasicDataSource;
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.obiba.magma.DatasourceFactory;
@@ -25,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.atomikos.jdbc.AbstractDataSourceBean;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -58,46 +60,12 @@ public class DefaultDatabaseRegistry implements DatabaseRegistry {
   private DefaultBeanValidator defaultBeanValidator;
 
   private final LoadingCache<String, DataSource> dataSourceCache = CacheBuilder.newBuilder()
-      .removalListener(new RemovalListener<String, DataSource>() {
-
-        @Override
-        public void onRemoval(RemovalNotification<String, DataSource> notification) {
-          log.info("Destroying DataSource {}", notification.getKey());
-          DataSource dataSource = notification.getValue();
-          if(dataSource != null) ((AbstractDataSourceBean) dataSource).close();
-        }
-      }) //
-      .build(new CacheLoader<String, DataSource>() {
-
-        @Override
-        public DataSource load(String databaseName) throws Exception {
-          log.info("Building DataSource {}", databaseName);
-          SqlDatabase database = (SqlDatabase) getDatabase(databaseName);
-          return dataSourceFactory.createDataSource(database);
-        }
-      });
+      .removalListener(new DataSourceRemovalListener()) //
+      .build(new DataSourceCacheLoader());
 
   private final LoadingCache<String, SessionFactory> sessionFactoryCache = CacheBuilder.newBuilder()
-      .removalListener(new RemovalListener<String, SessionFactory>() {
-        @Override
-        public void onRemoval(RemovalNotification<String, SessionFactory> notification) {
-          try {
-            log.info("Destroying SessionFactory {}", notification.getKey());
-            SessionFactory sf = notification.getValue();
-            if(sf != null) sf.close();
-          } catch(HibernateException e) {
-            log.warn("Ignoring exception during SessionFactory shutdown: ", e);
-          }
-        }
-      }) //
-      .build(new CacheLoader<String, SessionFactory>() {
-
-        @Override
-        public SessionFactory load(String databaseName) throws Exception {
-          log.info("Building SessionFactory {}", databaseName);
-          return sessionFactoryFactory.getSessionFactory(getDataSource(databaseName, null));
-        }
-      });
+      .removalListener(new SessionFactoryRemovalListener()) //
+      .build(new SessionFactoryCacheLoader());
 
   private final SetMultimap<String, String> registrations = Multimaps
       .synchronizedSetMultimap(HashMultimap.<String, String>create());
@@ -268,6 +236,52 @@ public class DefaultDatabaseRegistry implements DatabaseRegistry {
       return ((MongoDbDatabase) database).createMongoDBDatasourceFactory(datasourceName);
     }
     throw new IllegalArgumentException("Unknown datasource config for database " + database.getClass());
+  }
+
+  private class DataSourceCacheLoader extends CacheLoader<String, DataSource> {
+
+    @Override
+    public DataSource load(String databaseName) throws Exception {
+      log.info("Building DataSource {}", databaseName);
+      SqlDatabase database = (SqlDatabase) getDatabase(databaseName);
+      return dataSourceFactory.createDataSource(database);
+    }
+  }
+
+  private static class DataSourceRemovalListener implements RemovalListener<String, DataSource> {
+
+    @Override
+    public void onRemoval(RemovalNotification<String, DataSource> notification) {
+      log.info("Destroying DataSource {}", notification.getKey());
+      DataSource dataSource = notification.getValue();
+      try {
+        if(dataSource != null) ((BasicDataSource) dataSource).close();
+      } catch(SQLException e) {
+        log.warn("Ignoring exception during DataSource shutdown: ", e);
+      }
+    }
+  }
+
+  private static class SessionFactoryRemovalListener implements RemovalListener<String, SessionFactory> {
+    @Override
+    public void onRemoval(RemovalNotification<String, SessionFactory> notification) {
+      try {
+        log.info("Destroying SessionFactory {}", notification.getKey());
+        SessionFactory sf = notification.getValue();
+        if(sf != null) sf.close();
+      } catch(HibernateException e) {
+        log.warn("Ignoring exception during SessionFactory shutdown: ", e);
+      }
+    }
+  }
+
+  private class SessionFactoryCacheLoader extends CacheLoader<String, SessionFactory> {
+
+    @Override
+    public SessionFactory load(String databaseName) throws Exception {
+      log.info("Building SessionFactory {}", databaseName);
+      return sessionFactoryFactory.getSessionFactory(getDataSource(databaseName, null));
+    }
   }
 
 }

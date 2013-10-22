@@ -5,19 +5,17 @@
 
   <tx:annotation-driven/>
 
-  <bean id="userTransactionManagerManager" class="com.atomikos.icatch.jta.UserTransactionManager" init-method="init"
-      destroy-method="close">
-    <property name="forceShutdown" value="false"/>
-  </bean>
-
-  <bean id="userTransactionImp" class="com.atomikos.icatch.jta.UserTransactionImp">
-    <!-- Set a very high timeout (10 days) -->
-    <property name="transactionTimeout" value="864000"/>
-  </bean>
+  <bean id="jbossTransactionManager"
+      class="com.arjuna.ats.internal.jta.transaction.arjunacore.TransactionManagerImple"/>
 
   <bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
-    <property name="transactionManager" ref="userTransactionManagerManager"/>
-    <property name="userTransaction" ref="userTransactionImp"/>
+    <property name="transactionManager" ref="jbossTransactionManager"/>
+    <property name="userTransaction">
+      <bean class="com.arjuna.ats.internal.jta.transaction.arjunacore.UserTransactionImple">
+        <!-- Set a very high timeout (10 days) -->
+        <property name="transactionTimeout" value="864000"/>
+      </bean>
+    </property>
     <property name="allowCustomIsolationLevels" value="true"/>
   </bean>
 
