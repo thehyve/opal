@@ -61,7 +61,7 @@ public class SessionFactoryFactory {
 
     String beanName = dataSource.hashCode() + "-sessionFactory";
 
-    Set<Class<?>> annotatedTypes = new HibernateConfigurationHelper().getAnnotatedTypes();
+    Set<Class<?>> annotatedTypes = HibernateConfigurationHelper.getAnnotatedTypes();
     Dialect dialect = determineDialect(dataSource);
 
     LocalSessionFactoryBean factoryBean = new LocalSessionFactoryBean();
