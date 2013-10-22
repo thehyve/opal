@@ -28,11 +28,13 @@ public class DataSourceFactory {
     BasicManagedDataSource dataSource = new BasicManagedDataSource();
     dataSource.setTransactionManager(transactionManager);
     dataSource.setDriverClassName(database.getDriverClass());
+//    dataSource.setXADataSource("com.mysql.jdbc.jdbc2.optional.MysqlXADataSource");
     dataSource.setUrl(database.getUrl());
     dataSource.setUsername(database.getUsername());
     dataSource.setPassword(database.getPassword());
     dataSource.setInitialSize(3);
     dataSource.setMaxActive(50);
+    dataSource.setDefaultAutoCommit(false);
 
     if("com.mysql.jdbc.Driver".equals(database.getDriverClass())) {
       dataSource.setValidationQuery("select 1");

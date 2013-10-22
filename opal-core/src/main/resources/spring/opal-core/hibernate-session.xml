@@ -7,14 +7,15 @@
 
   <!-- configure a JTA-aware datasource -->
   <bean id="dataSource" class="org.apache.commons.dbcp.managed.BasicManagedDataSource">
-    <property name="transactionManager" ref="jbossTransactionManager"/>
-    <property name="driverClassName" value="com.arjuna.ats.jdbc.TransactionalDriver"/>
+    <property name="transactionManager" ref="arjunaTransactionManager"/>
+    <property name="driverClassName" value="${org.obiba.opal.datasource.driver}"/>
     <property name="url" value="${org.obiba.opal.datasource.url}"/>
     <property name="username" value="${org.obiba.opal.datasource.username}"/>
     <property name="password" value="${org.obiba.opal.datasource.password}"/>
     <property name="validationQuery" value="${org.obiba.opal.datasource.validationQuery}"/>
     <property name="initialSize" value="3"/>
     <property name="maxActive" value="20"/>
+    <property name="defaultAutoCommit" value="false"/>
   </bean>
 
   <!-- Default Hibernate properties used when creating SessionFactory for Magma Hibernate Datasources -->
@@ -22,6 +23,7 @@
     <qualifier value="hibernate"/>
     <property name="properties">
       <props>
+        <prop key="hibernate.hbm2ddl.auto">update</prop>
         <prop key="hibernate.generate_statistics">false</prop>
         <prop key="hibernate.cache.use_structured_entries">true</prop>
         <prop key="hibernate.cache.use_query_cache">true</prop>
@@ -33,9 +35,9 @@
         <!-- Set the CurrentSessionContext to JTASessionContext: a Hibernate Session will be available when a transaction is active -->
         <prop key="hibernate.current_session_context_class">jta</prop>
 
-        <!--<prop key="hibernate.transaction.factory_class">-->
-        <!--org.hibernate.engine.transaction.internal.jta.JtaTransactionFactory-->
-        <!--</prop>-->
+        <prop key="hibernate.transaction.factory_class">
+          org.hibernate.engine.transaction.internal.jta.JtaTransactionFactory
+        </prop>
         <prop key="hibernate.transaction.jta.platform">
           org.hibernate.service.jta.platform.internal.JBossStandAloneJtaPlatform
         </prop>

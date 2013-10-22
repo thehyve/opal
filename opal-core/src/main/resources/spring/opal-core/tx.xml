@@ -5,21 +5,21 @@
 
   <tx:annotation-driven/>
 
-  <bean id="jbossTransactionManager"
-      class="com.arjuna.ats.internal.jta.transaction.arjunacore.TransactionManagerImple"/>
+  <bean id="arjunaTransactionManager" class="com.arjuna.ats.jta.TransactionManager"
+      factory-method="transactionManager"/>
+
+  <bean id="arjunaUserTransaction" class="com.arjuna.ats.jta.UserTransaction" factory-method="userTransaction">
+    <!-- Set a very high timeout (10 days) -->
+    <property name="transactionTimeout" value="864000"/>
+  </bean>
 
   <bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
-    <property name="transactionManager" ref="jbossTransactionManager"/>
-    <property name="userTransaction">
-      <bean class="com.arjuna.ats.internal.jta.transaction.arjunacore.UserTransactionImple">
-        <!-- Set a very high timeout (10 days) -->
-        <property name="transactionTimeout" value="864000"/>
-      </bean>
-    </property>
+    <property name="transactionManager" ref="arjunaTransactionManager"/>
+    <property name="userTransaction" ref="arjunaUserTransaction"/>
     <property name="allowCustomIsolationLevels" value="true"/>
   </bean>
 
-  <bean id="transactionTemplate" class="org.springframework.transaction.support.TransactionTemplate" scope="prototype">
+  <bean id="transactionTemplate" class="org.springframework.transaction.support.TransactionTemplate">
     <property name="transactionManager" ref="transactionManager"/>
   </bean>
 

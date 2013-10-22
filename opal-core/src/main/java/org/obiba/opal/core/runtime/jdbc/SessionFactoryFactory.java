@@ -16,19 +16,14 @@ import java.util.Set;
 
 import javax.sql.DataSource;
 
-import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Environment;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.service.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.service.jdbc.dialect.internal.DialectFactoryImpl;
 import org.hibernate.service.jdbc.dialect.internal.StandardDialectResolver;
-import org.hibernate.tool.hbm2ddl.SchemaUpdate;
-import org.hibernate.tool.hbm2ddl.SchemaValidator;
 import org.obiba.magma.datasource.hibernate.cfg.HibernateConfigurationHelper;
 import org.obiba.magma.datasource.hibernate.cfg.MagmaNamingStrategy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -41,8 +36,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class SessionFactoryFactory {
 
-  private final static Logger log = LoggerFactory.getLogger(SessionFactoryFactory.class);
-
   @Autowired
   private ApplicationContext applicationContext;
 
@@ -50,16 +43,15 @@ public class SessionFactoryFactory {
   @Qualifier("hibernate")
   private Properties hibernateProperties;
 
-  private final DialectFactoryImpl dialectFactory = new DialectFactoryImpl();
+  private final DialectFactoryImpl dialectFactory;
 
   public SessionFactoryFactory() {
+    dialectFactory = new DialectFactoryImpl();
     dialectFactory.setClassLoaderService(new ClassLoaderServiceImpl(getClass().getClassLoader()));
     dialectFactory.setDialectResolver(new StandardDialectResolver());
   }
 
   public SessionFactory getSessionFactory(DataSource dataSource) {
-
-    String beanName = dataSource.hashCode() + "-sessionFactory";
 
     Set<Class<?>> annotatedTypes = HibernateConfigurationHelper.getAnnotatedTypes();
     Dialect dialect = determineDialect(dataSource);
@@ -73,26 +65,9 @@ public class SessionFactoryFactory {
 
     // Inject dependencies
     factoryBean = (LocalSessionFactoryBean) applicationContext.getAutowireCapableBeanFactory()
-        .initializeBean(factoryBean, beanName);
-
-    onSessionFactoryBeanCreated(factoryBean);
+        .initializeBean(factoryBean, dataSource.hashCode() + "-sessionFactory");
 
     return factoryBean.getObject();
-  }
-
-  protected void onSessionFactoryBeanCreated(LocalSessionFactoryBean factoryBean) {
-    try {
-      log.info("Verifying database schema.");
-      new SchemaValidator(factoryBean.getConfiguration()).validate();
-    } catch(HibernateException dae) {
-      log.info("Invalid schema for hibernate datasource; updating schema.");
-      try {
-        new SchemaUpdate(factoryBean.getConfiguration()).execute(false, true);
-      } catch(RuntimeException e) {
-        log.error("Failed to update schema: {}", e.getMessage());
-        throw e;
-      }
-    }
   }
 
   private Dialect determineDialect(DataSource dataSource) {
