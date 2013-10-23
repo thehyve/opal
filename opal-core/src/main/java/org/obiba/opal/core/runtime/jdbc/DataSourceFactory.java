@@ -21,19 +21,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class DataSourceFactory {
 
+  public static final int MIN_POOL_SIZE = 3;
+
+  public static final int MAX_POOL_SIZE = 50;
+
   @Autowired
-  private TransactionManager transactionManager;
+  private TransactionManager arjunaTransactionManager;
 
   public DataSource createDataSource(@Nonnull SqlDatabase database) {
     BasicManagedDataSource dataSource = new BasicManagedDataSource();
-    dataSource.setTransactionManager(transactionManager);
+    dataSource.setTransactionManager(arjunaTransactionManager);
     dataSource.setDriverClassName(database.getDriverClass());
-//    dataSource.setXADataSource("com.mysql.jdbc.jdbc2.optional.MysqlXADataSource");
     dataSource.setUrl(database.getUrl());
     dataSource.setUsername(database.getUsername());
     dataSource.setPassword(database.getPassword());
-    dataSource.setInitialSize(3);
-    dataSource.setMaxActive(50);
+    dataSource.setInitialSize(MIN_POOL_SIZE);
+    dataSource.setMaxActive(MAX_POOL_SIZE);
     dataSource.setDefaultAutoCommit(false);
 
     if("com.mysql.jdbc.Driver".equals(database.getDriverClass())) {
