@@ -26,11 +26,11 @@ public class DataSourceFactory {
   public static final int MAX_POOL_SIZE = 50;
 
   @Autowired
-  private TransactionManager arjunaTransactionManager;
+  private TransactionManager jtaTransactionManager;
 
   public DataSource createDataSource(@Nonnull SqlDatabase database) {
     BasicManagedDataSource dataSource = new BasicManagedDataSource();
-    dataSource.setTransactionManager(arjunaTransactionManager);
+    dataSource.setTransactionManager(jtaTransactionManager);
     dataSource.setDriverClassName(database.getDriverClass());
     dataSource.setUrl(database.getUrl());
     dataSource.setUsername(database.getUsername());

@@ -7,7 +7,7 @@
 
   <!-- configure a JTA-aware datasource -->
   <bean id="dataSource" class="org.apache.commons.dbcp.managed.BasicManagedDataSource">
-    <property name="transactionManager" ref="arjunaTransactionManager"/>
+    <property name="transactionManager" ref="jtaTransactionManager"/>
     <property name="driverClassName" value="${org.obiba.opal.datasource.driver}"/>
     <property name="url" value="${org.obiba.opal.datasource.url}"/>
     <property name="username" value="${org.obiba.opal.datasource.username}"/>

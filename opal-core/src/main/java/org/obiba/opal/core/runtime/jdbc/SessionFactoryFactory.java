@@ -15,6 +15,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import javax.sql.DataSource;
+import javax.transaction.TransactionManager;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Environment;
@@ -40,6 +41,9 @@ public class SessionFactoryFactory {
   private ApplicationContext applicationContext;
 
   @Autowired
+  private TransactionManager jtaTransactionManager;
+
+  @Autowired
   @Qualifier("hibernate")
   private Properties hibernateProperties;
 
@@ -58,6 +62,7 @@ public class SessionFactoryFactory {
 
     LocalSessionFactoryBean factoryBean = new LocalSessionFactoryBean();
     factoryBean.setDataSource(dataSource);
+    factoryBean.setJtaTransactionManager(jtaTransactionManager);
     factoryBean.setHibernateProperties(hibernateProperties);
     factoryBean.getHibernateProperties().setProperty(Environment.DIALECT, dialect.getClass().getName());
     factoryBean.setAnnotatedClasses(annotatedTypes.toArray(new Class[annotatedTypes.size()]));
