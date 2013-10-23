@@ -11,16 +11,6 @@
   <import resource="version.xml"/>
   <import resource="hibernate-session.xml"/>
 
-  <!--<bean class="org.springframework.beans.factory.config.CustomEditorConfigurer">-->
-  <!--<property name="customEditors">-->
-  <!--<map>-->
-  <!--<entry key="org.obiba.runtime.Version">-->
-  <!--<bean id="versionEditor" class="org.obiba.runtime.upgrade.support.VersionPropertyEditor"/>-->
-  <!--</entry>-->
-  <!--</map>-->
-  <!--</property>-->
-  <!--</bean>-->
-
   <bean id="dataSourceFactory" class="org.obiba.opal.core.runtime.jdbc.DataSourceFactory"/>
 
   <bean id="sessionFactoryFactory" class="org.obiba.opal.core.runtime.jdbc.SessionFactoryFactory"/>

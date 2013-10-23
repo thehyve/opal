@@ -28,7 +28,7 @@ public class DataSourceFactoryBean implements FactoryBean<DataSource> {
   private static final int MAX_IDLE = 10;
 
   @Autowired
-  private TransactionManager jtaTransactionManager;
+  private TransactionManager transactionManager;
 
   private String driverClass;
 
@@ -41,7 +41,7 @@ public class DataSourceFactoryBean implements FactoryBean<DataSource> {
   @Override
   public DataSource getObject() {
     BasicManagedDataSource dataSource = new BasicManagedDataSource();
-    dataSource.setTransactionManager(jtaTransactionManager);
+    dataSource.setTransactionManager(transactionManager);
     dataSource.setDriverClassName(driverClass);
     dataSource.setUrl(url);
     dataSource.setUsername(username);
@@ -91,7 +91,7 @@ public class DataSourceFactoryBean implements FactoryBean<DataSource> {
     this.password = password;
   }
 
-  public void setJtaTransactionManager(TransactionManager jtaTransactionManager) {
-    this.jtaTransactionManager = jtaTransactionManager;
+  public void setTransactionManager(TransactionManager transactionManager) {
+    this.transactionManager = transactionManager;
   }
 }

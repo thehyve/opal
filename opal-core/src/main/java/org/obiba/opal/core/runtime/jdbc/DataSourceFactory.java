@@ -25,7 +25,7 @@ public class DataSourceFactory {
 
   public DataSource createDataSource(@Nonnull SqlDatabase database) {
     DataSourceFactoryBean factoryBean = new DataSourceFactoryBean();
-    factoryBean.setJtaTransactionManager(jtaTransactionManager);
+    factoryBean.setTransactionManager(jtaTransactionManager);
     factoryBean.setDriverClass(database.getDriverClass());
     factoryBean.setUrl(database.getUrl());
     factoryBean.setUsername(database.getUsername());

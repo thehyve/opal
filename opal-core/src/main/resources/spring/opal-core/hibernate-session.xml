@@ -7,6 +7,7 @@
 
   <!-- configure a JTA-aware datasource -->
   <bean id="dataSource" class="org.obiba.opal.core.runtime.jdbc.DataSourceFactoryBean">
+    <property name="transactionManager" ref="jtaTransactionManager"/>
     <property name="driverClass" value="${org.obiba.opal.datasource.driver}"/>
     <property name="url" value="${org.obiba.opal.datasource.url}"/>
     <property name="username" value="${org.obiba.opal.datasource.username}"/>
