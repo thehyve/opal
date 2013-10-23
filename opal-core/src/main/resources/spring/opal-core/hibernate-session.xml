@@ -23,6 +23,23 @@
     <property name="allowLocalTransactions" value="true"/>
   </bean>
 
+  <!--<bean id="dataSource" class="bitronix.tm.resource.jdbc.PoolingDataSource">-->
+  <!--<property name="uniqueName" value="opal-config"/>-->
+  <!--<property name="className" value="bitronix.tm.resource.jdbc.lrc.LrcXADataSource"/>-->
+  <!--<property name="driverProperties">-->
+  <!--<props>-->
+  <!--<prop key="driverClassName">${org.obiba.opal.datasource.driver}</prop>-->
+  <!--<prop key="url">${org.obiba.opal.datasource.url}</prop>-->
+  <!--<prop key="user">${org.obiba.opal.datasource.username}</prop>-->
+  <!--<prop key="password">${org.obiba.opal.datasource.password}</prop>-->
+  <!--</props>-->
+  <!--</property>-->
+  <!--<property name="testQuery" value="${org.obiba.opal.datasource.validationQuery}"/>-->
+  <!--<property name="minPoolSize" value="3"/>-->
+  <!--<property name="maxPoolSize" value="20"/>-->
+  <!--<property name="allowLocalTransactions" value="true"/>-->
+  <!--</bean>-->
+
   <!-- Default Hibernate properties used when creating SessionFactory for Magma Hibernate Datasources -->
   <bean id="hibernateProperties" class="org.obiba.opal.core.runtime.jdbc.HsqlDialectOverride">
     <qualifier value="hibernate"/>

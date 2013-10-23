@@ -16,6 +16,7 @@ import org.obiba.opal.core.domain.database.SqlDatabase;
 import org.springframework.stereotype.Component;
 
 import bitronix.tm.resource.jdbc.PoolingDataSource;
+import bitronix.tm.resource.jdbc.lrc.LrcXADataSource;
 
 @Component
 public class DataSourceFactory {
@@ -27,8 +28,8 @@ public class DataSourceFactory {
   public DataSource createDataSource(@Nonnull SqlDatabase database) {
     PoolingDataSource dataSource = new PoolingDataSource();
     dataSource.setUniqueName(database.getName());
-//    dataSource.setClassName(database.getDriverClass());
-    dataSource.setClassName("com.mysql.jdbc.jdbc2.optional.MysqlXADataSource");
+    dataSource.setClassName(LrcXADataSource.class.getName()); // needed for non-XA databases
+    dataSource.getDriverProperties().setProperty("driverClassName", database.getDriverClass());
     dataSource.getDriverProperties().setProperty("url", database.getUrl());
     dataSource.getDriverProperties().setProperty("user", database.getUsername());
     dataSource.getDriverProperties().setProperty("password", database.getPassword());
