@@ -13,7 +13,6 @@ import javax.annotation.Nonnull;
 import javax.sql.DataSource;
 import javax.transaction.TransactionManager;
 
-import org.apache.commons.dbcp.managed.BasicManagedDataSource;
 import org.obiba.opal.core.domain.database.SqlDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,32 +20,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class DataSourceFactory {
 
-  public static final int MIN_POOL_SIZE = 3;
-
-  public static final int MAX_POOL_SIZE = 50;
-
   @Autowired
   private TransactionManager jtaTransactionManager;
 
   public DataSource createDataSource(@Nonnull SqlDatabase database) {
-    BasicManagedDataSource dataSource = new BasicManagedDataSource();
-    dataSource.setTransactionManager(jtaTransactionManager);
-    dataSource.setDriverClassName(database.getDriverClass());
-    dataSource.setUrl(database.getUrl());
-    dataSource.setUsername(database.getUsername());
-    dataSource.setPassword(database.getPassword());
-    dataSource.setInitialSize(MIN_POOL_SIZE);
-    dataSource.setMaxActive(MAX_POOL_SIZE);
-    dataSource.setDefaultAutoCommit(false);
-
-    if("com.mysql.jdbc.Driver".equals(database.getDriverClass())) {
-      dataSource.setValidationQuery("select 1");
-    } else if("org.hsqldb.jdbcDriver".equals(database.getDriverClass())) {
-      dataSource.setValidationQuery("select 1 from INFORMATION_SCHEMA.SYSTEM_USERS");
-    }
-    //TODO validation query for PostgreSQL
-
-    return dataSource;
+    DataSourceFactoryBean factoryBean = new DataSourceFactoryBean();
+    factoryBean.setJtaTransactionManager(jtaTransactionManager);
+    factoryBean.setDriverClass(database.getDriverClass());
+    factoryBean.setUrl(database.getUrl());
+    factoryBean.setUsername(database.getUsername());
+    factoryBean.setPassword(database.getPassword());
+    return factoryBean.getObject();
   }
 
 }
