@@ -9,7 +9,6 @@ import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import javax.validation.ConstraintViolationException;
 
-import org.apache.commons.dbcp.BasicDataSource;
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.obiba.magma.DatasourceFactory;
@@ -39,6 +38,7 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.mchange.v2.c3p0.PooledDataSource;
 import com.orientechnologies.orient.object.db.OObjectDatabaseTx;
 
 @SuppressWarnings("OverlyCoupledClass")
@@ -255,7 +255,7 @@ public class DefaultDatabaseRegistry implements DatabaseRegistry {
       log.info("Destroying DataSource {}", notification.getKey());
       DataSource dataSource = notification.getValue();
       try {
-        if(dataSource != null) ((BasicDataSource) dataSource).close();
+        if(dataSource != null) ((PooledDataSource) dataSource).close();
       } catch(SQLException e) {
         log.warn("Ignoring exception during DataSource shutdown: ", e);
       }

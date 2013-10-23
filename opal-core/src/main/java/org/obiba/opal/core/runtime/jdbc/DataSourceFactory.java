@@ -11,21 +11,15 @@ package org.obiba.opal.core.runtime.jdbc;
 
 import javax.annotation.Nonnull;
 import javax.sql.DataSource;
-import javax.transaction.TransactionManager;
 
 import org.obiba.opal.core.domain.database.SqlDatabase;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DataSourceFactory {
 
-  @Autowired
-  private TransactionManager jtaTransactionManager;
-
   public DataSource createDataSource(@Nonnull SqlDatabase database) {
     DataSourceFactoryBean factoryBean = new DataSourceFactoryBean();
-    factoryBean.setTransactionManager(jtaTransactionManager);
     factoryBean.setDriverClass(database.getDriverClass());
     factoryBean.setUrl(database.getUrl());
     factoryBean.setUsername(database.getUsername());

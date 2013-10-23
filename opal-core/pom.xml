@@ -111,8 +111,8 @@
       <artifactId>narayana-jta</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-dbcp</groupId>
-      <artifactId>commons-dbcp</artifactId>
+      <groupId>com.mchange</groupId>
+      <artifactId>c3p0</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
