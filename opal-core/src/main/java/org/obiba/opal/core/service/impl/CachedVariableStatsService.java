@@ -59,7 +59,7 @@ public class CachedVariableStatsService implements VariableStatsService {
     continuousSummaryService.computeAndCacheSummaries(table);
     categoricalSummaryService.computeAndCacheSummaries(table);
     clearComputingSummaries(table);
-    log.info("Variables summaries for {} computed in {}", table.getTableReference(),
+    log.debug("Variables summaries for {} computed in {}", table.getTableReference(),
         timedExecution.end().formatExecutionTime());
   }
 
