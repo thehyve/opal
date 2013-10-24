@@ -454,16 +454,58 @@
         <version>${jta.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.jboss.narayana.jta</groupId>
-        <artifactId>narayana-jta</artifactId>
-        <version>${narayana.version}</version>
+        <groupId>org.ow2.jotm</groupId>
+        <artifactId>jotm-core</artifactId>
+        <version>${jotm.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.ow2.carol.irmi</groupId>
+            <artifactId>irmi</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.ow2.cmi</groupId>
+            <artifactId>cmi-admin</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.ow2.cmi</groupId>
+            <artifactId>cmi-jndi</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jacorb</groupId>
+            <artifactId>jacorb</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jacorb</groupId>
+            <artifactId>jacorb-idl</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <!-- JOTM requires javax.resource and javax.transaction Java APIs; these are missing due to the exclusions declared
+        above for the JOTM dependency. -->
+      <!-- javax.resource -->
+      <dependency>
+        <groupId>org.ow2.spec.ee</groupId>
+        <artifactId>ow2-connector-1.5-spec</artifactId>
+        <version>${ow2-spec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ow2.spec.ee</groupId>
+        <artifactId>ow2-jta-1.1-spec</artifactId>
+        <version>${ow2-spec.version}</version>
       </dependency>
       <dependency>
         <groupId>com.mchange</groupId>
         <artifactId>c3p0</artifactId>
         <version>${c3p0.version}</version>
       </dependency>
-
       <dependency>
         <groupId>javax.persistence</groupId>
         <artifactId>persistence-api</artifactId>
@@ -1608,6 +1650,7 @@
     <jgit.version>3.0.0.201306101825-r</jgit.version>
     <jline.version>0.9.94</jline.version>
     <joda-time.version>2.3</joda-time.version>
+    <jotm.version>2.2.3</jotm.version>
     <jpa.version>1.0.2</jpa.version>
     <json.version>20090211</json.version>
     <jsr305.version>2.0.2</jsr305.version>
@@ -1621,11 +1664,11 @@
     <mockftpserver.version>2.4</mockftpserver.version>
     <mongodb-driver.version>2.11.3</mongodb-driver.version>
     <mysql-connector-java.version>5.1.26</mysql-connector-java.version>
-    <narayana.version>5.0.0.M8</narayana.version>
     <obiba-commons.version>1.5-SNAPSHOT</obiba-commons.version>
     <opal-oda.version>1.2.3</opal-oda.version>
     <opencsv.version>2.3</opencsv.version>
     <orientdb.version>1.5.1</orientdb.version>
+    <ow2-spec.version>1.0.2</ow2-spec.version>
     <protobuf-java-format.version>1.2.1-obiba</protobuf-java-format.version>
     <protobuf.version>2.3.0</protobuf.version>
     <protostuff.version>1.0.1</protostuff.version>
