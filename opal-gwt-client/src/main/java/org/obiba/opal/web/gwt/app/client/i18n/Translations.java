@@ -193,7 +193,8 @@ public interface Translations extends Constants {
       "DATABASES_ALL.help", "Administrate databases.", //
       "R_USE.help", "Use R services: can push accessible data to R and can execute ANY R commands on them.", //
       "DATASHIELD_ALL.help", "Administrate DataSHIELD settings.", //
-      "DATASHIELD_USE.help", "Use DataSHIELD services: can push accessible data to R and can execute limited R commands on them.", //
+      "DATASHIELD_USE.help",
+      "Use DataSHIELD services: can push accessible data to R and can execute limited R commands on them.", //
       "REPORT_TEMPLATE_ALL.help", "Full access to the report template (settings and reports).", //
       "REPORT_TEMPLATE_READ.help", "View reports only." })
   Map<String, String> permissionExplanationMap();
@@ -282,10 +283,6 @@ public interface Translations extends Constants {
   @Description("Provide a name for this category label")
   @DefaultStringValue("Provide a name for this category.")
   String categoryNameRequired();
-
-  @Description("Category name duplicated")
-  @DefaultStringValue("Duplicated category name {0}.")
-  String categoryNameDuplicated();
 
   @Description("You must select a file message")
   @DefaultStringValue("You must select a file.")
@@ -1916,10 +1913,6 @@ public interface Translations extends Constants {
   @Description("Rename {0} to {1} label")
   @DefaultStringValue("Rename {0} to {1}")
   String renameToComment();
-
-  @Description("Update {0} categories label")
-  @DefaultStringValue("Update {0} categories")
-  String updateVariableCategories();
 
   @Description("Update {0} properties label")
   @DefaultStringValue("Update {0} properties")
