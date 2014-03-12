@@ -575,7 +575,7 @@ public enum UriBuilders {
   BOOKMARK {
     @Override
     public UriBuilder create() {
-      return UriBuilder.create().segment("system", "subject-profile", "_current", "bookmark", "{}");
+      return UriBuilder.create().segment("system", "subject-profile", "_current", "bookmark");
     }
   },
 

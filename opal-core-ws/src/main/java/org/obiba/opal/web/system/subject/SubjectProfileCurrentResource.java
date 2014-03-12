@@ -14,11 +14,9 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
@@ -67,18 +65,15 @@ public class SubjectProfileCurrentResource {
     return resource.getBookmarks();
   }
 
-  @Path("/bookmark/{path:.*}")
-  @GET
+  @Path("/bookmark")
   @NoAuthorization
-  public Response getBookmark(@PathParam("path") String path) throws UnsupportedEncodingException {
-    log.debug("Getting configuration defaultCharSet");
-    String defaultCharacterSet = opalGeneralConfigService.getConfig().getDefaultCharacterSet();
-    log.debug("Retrieving current user's bookmark with path: {} and default Charset: {}", path, defaultCharacterSet);
+  public BookmarkResource getBookmark(@QueryParam("path") String path) {
+    log.info("Get BookmarkResource");
+    BookmarkResource bookmarkResource = applicationContext.getBean(BookmarkResource.class);
+    bookmarkResource.setPrincipal(getPrincipal());
+    bookmarkResource.setPath(path);
 
-    BookmarkResource resource = applicationContext.getBean(BookmarkResource.class);
-    resource.setPrincipal(getPrincipal());
-    resource.setPath(URLDecoder.decode(path, defaultCharacterSet));
-    return resource.get();
+    return bookmarkResource;
   }
 
   @Path("/bookmarks")
@@ -88,16 +83,6 @@ public class SubjectProfileCurrentResource {
     BookmarksResource resource = applicationContext.getBean(BookmarksResource.class);
     resource.setPrincipal(getPrincipal());
     return resource.addBookmarks(decodeResources(resources));
-  }
-
-  @Path("/bookmark/{path:.*}")
-  @DELETE
-  @NoAuthorization
-  public Response deleteBookmark(@PathParam("path") String path) throws UnsupportedEncodingException {
-    BookmarkResource resource = applicationContext.getBean(BookmarkResource.class);
-    resource.setPrincipal(getPrincipal());
-    resource.setPath(URLDecoder.decode(path, opalGeneralConfigService.getConfig().getDefaultCharacterSet()));
-    return resource.delete();
   }
 
   private String getPrincipal() {

@@ -59,7 +59,7 @@ public class BookmarkIconPresenter extends PresenterWidget<BookmarkIconPresenter
     }
 
     ResourceRequestBuilderFactory.newBuilder() //
-        .forResource(UriBuilders.BOOKMARK.create().build(path)) //
+        .forResource(UriBuilders.BOOKMARK.create().query("path", path).build()) //
         .withCallback(Response.SC_OK, new ResponseCodeCallback() {
           @Override
           public void onResponseCode(Request request, Response response) {
@@ -79,7 +79,7 @@ public class BookmarkIconPresenter extends PresenterWidget<BookmarkIconPresenter
   public void toggleBookmark() {
     if(bookmarked) {
       ResourceRequestBuilderFactory.newBuilder() //
-          .forResource(UriBuilders.BOOKMARK.create().build(path)) //
+          .forResource(UriBuilders.BOOKMARK.create().query("path", path).build()) //
           .withCallback(Response.SC_OK, new ResponseCodeCallback() {
             @Override
             public void onResponseCode(Request request, Response response) {

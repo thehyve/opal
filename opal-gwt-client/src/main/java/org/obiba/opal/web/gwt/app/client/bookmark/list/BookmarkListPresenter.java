@@ -63,7 +63,7 @@ public class BookmarkListPresenter extends PresenterWidget<BookmarkListPresenter
 
   private void deleteBookmark(BookmarkDto bookmarkDto) {
     ResourceRequestBuilderFactory.newBuilder() //
-        .forResource(UriBuilders.BOOKMARK.create().build(bookmarkDto.getResource())) //
+        .forResource(UriBuilders.BOOKMARK.create().query("path", bookmarkDto.getResource()).build()) //
         .withCallback(Response.SC_OK, new ResponseCodeCallback() {
           @Override
           public void onResponseCode(Request request, Response response) {
