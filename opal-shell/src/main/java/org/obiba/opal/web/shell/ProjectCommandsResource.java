@@ -10,7 +10,10 @@
 package org.obiba.opal.web.shell;
 
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -25,6 +28,7 @@ import org.obiba.magma.support.MagmaEngineTableResolver;
 import org.obiba.opal.shell.CommandJob;
 import org.obiba.opal.shell.CommandRegistry;
 import org.obiba.opal.shell.Dtos;
+import org.obiba.opal.shell.batch.DataExportParameters;
 import org.obiba.opal.shell.commands.Command;
 import org.obiba.opal.shell.commands.options.CopyCommandOptions;
 import org.obiba.opal.shell.commands.options.ImportCommandOptions;
@@ -35,6 +39,9 @@ import org.obiba.opal.shell.web.ImportCommandOptionsDtoImpl;
 import org.obiba.opal.shell.web.ReportCommandOptionsDtoImpl;
 import org.obiba.opal.web.model.Commands;
 import org.obiba.opal.web.support.InvalidRequestException;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameter;
+import org.springframework.batch.core.launch.NoSuchJobException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
@@ -107,7 +114,7 @@ public class ProjectCommandsResource extends AbstractCommandsResource {
 
   @POST
   @Path("/_export")
-  public Response exportData(Commands.ExportCommandOptionsDto options) {
+  public Response exportData(Commands.ExportCommandOptionsDto options) throws NoSuchJobException {
     String commandName = "export";
 
     for(String table : options.getTablesList()) {
@@ -119,6 +126,9 @@ public class ProjectCommandsResource extends AbstractCommandsResource {
     } else if(options.hasOut()) {
       ensureFileWriteAccess(options.getOut());
     }
+
+    Job job = jobRegistry.getJob("dataExportJob");
+    jobExecutionService.launchJob(job, new DataExportParameters(opalRuntime, options).asJobParameters());
 
     CopyCommandOptions copyOptions = new ExportCommandOptionsDtoImpl(opalRuntime, options);
     Command<CopyCommandOptions> copyCommand = commandRegistry.newCommand(commandName);

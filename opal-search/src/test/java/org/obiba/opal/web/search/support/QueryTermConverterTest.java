@@ -183,7 +183,7 @@ public class QueryTermConverterTest {
 
         if(expectedValue instanceof JSONObject) {
           // For now, recurse only the JSON object
-          assertThat(expected.getJSONObject(key)).isEqualTo(target.getJSONObject(key));
+          assertThat(expected.getJSONObject(key).toString()).isEqualTo(target.getJSONObject(key).toString());
         } else if(expectedValue instanceof JSONArray) {
           // TODO handle JSONArray in the future
           Assert.fail();

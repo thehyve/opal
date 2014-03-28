@@ -114,6 +114,10 @@
       <artifactId>spring-tx</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.springframework.batch</groupId>
+      <artifactId>spring-batch-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>net.sf.opencsv</groupId>
       <artifactId>opencsv</artifactId>
     </dependency>

@@ -53,6 +53,10 @@
     </dependency>
     <dependency>
       <groupId>org.obiba.opal</groupId>
+      <artifactId>opal-shell</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.obiba.opal</groupId>
       <artifactId>opal-gwt-client</artifactId>
       <type>war</type>
     </dependency>

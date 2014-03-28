@@ -3,6 +3,7 @@
 
   <import resource="config.xml"/>
   <import resource="classpath:spring/opal-core/context.xml"/>
+  <import resource="classpath:spring/opal-shell/context.xml"/>
   <import resource="file:${OPAL_HOME}/conf/custom-context.xml"/>
 
 </beans>
