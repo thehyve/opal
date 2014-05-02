@@ -1,0 +1,40 @@
+---
+# Every Vagrant virtual environment requires a box to build off of.
+# For this Vagrant/Opal setup, the requirement is a Debian based with puppet installed
+
+box: 'ubuntu/trusty64'
+
+# Disable automatic box update checking. If you disable this, then
+# boxes will only be checked for updates when the user runs
+# `vagrant box outdated`. This is not recommended.
+
+box_check_update: true
+
+# true to boot with headless mode
+box_gui: false
+
+# memory in MB of the guest VM
+
+vm_memory: 8192
+
+# number of cpus in the guest VM
+
+vm_cpus: 2
+
+# Array of forwarded ports
+# Each item is an array with 2 args to forward a port in the host to a port in the guest 
+# The first argument is the source host port 
+# The second argument is the target guest port
+# ATTENTION: Opal needs at least guest ports 8080 and 8443 to be forwarded to from the host
+
+forwarded_ports: [[8080,8080], [8443,8443]]
+
+# Array of synchronized folders
+# Each item is an array with 2 or 3 args that will share a folder to the guest VM. 
+# The first argument is the path on the host to the actual folder. 
+# The second argument the path on the guest to mount the folder. 
+# The optional third argument is a set of non-required options.
+# Example: 
+# synced_folders: [['host_path1', 'guest_path1'], ['host_path2', 'guest_path2']]
+
+synced_folders: []

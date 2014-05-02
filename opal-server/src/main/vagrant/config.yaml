@@ -1,0 +1,4 @@
+---
+vm_memory: 4096
+vm_cpus: 2
+forwarded_ports: [[8080,8080], [8443,8443]]
