@@ -6,10 +6,10 @@ package { $packages:
 }
 
 apt::source { 'opal':
-	location    => 'http://pkg.obiba.org',
-	release     => 'stable/',
-  	repos       => '',
-  	key         => '7A49E499',
+	location    => 'http://apt.thehyve.net/opal',
+	release     => 'stable',
+  	repos       => 'main',
+  	key         => '3375DA21',
     key_server  => 'keyserver.ubuntu.com',
     include_src => false,
     before      => [Package['opal'], Package['opal-rserver']]
