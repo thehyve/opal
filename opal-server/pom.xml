@@ -149,7 +149,7 @@
               <descriptors>
                 <descriptor>src/main/assembly/vagrant.xml</descriptor>
               </descriptors>
-              </configuration>
+            </configuration>
           </execution>
         </executions>
       </plugin>
