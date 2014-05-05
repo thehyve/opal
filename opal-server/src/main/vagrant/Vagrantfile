@@ -62,15 +62,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
 	# Disable automatic box update checking. If you disable this, then
   	# boxes will only be checked for updates when the user runs
-  	# `vagrant box outdated`. This is not recommended.
+	# `vagrant box outdated`. This is not recommended.
 	config.vm.box_check_update = v_config['box_check_update']
 	
 	v_config['synced_folders'].each do |i|
-	  	# Share an additional folder to the guest VM. 
-  		# The first argument is the path on the host to the actual folder. 
-	  	# The second argument the path on the guest to mount the folder. 
-  		# The optional third argument is a set of non-required options.
-	  	# config.vm.synced_folder "../data", "/vagrant_data"
+		# Share an additional folder to the guest VM. 
+		# The first argument is the path on the host to the actual folder. 
+		# The second argument the path on the guest to mount the folder. 
+		# The optional third argument is a set of non-required options.
+		# config.vm.synced_folder "../data", "/vagrant_data"
 		config.vm.synced_folder *i
 	end
 

@@ -126,18 +126,30 @@
     <plugins>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <descriptors>
-            <descriptor>src/main/assembly/opal-server.xml</descriptor>
-          </descriptors>
-        </configuration>
         <executions>
           <execution>
             <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
+              <phase>package</phase>
+    	        <goals>
+        	      <goal>single</goal>
+            	</goals>
+      		  	<configuration>
+    	      		<descriptors>
+        	    		<descriptor>src/main/assembly/opal-server.xml</descriptor>
+          	  	</descriptors>
+    	    	</configuration>
+          	</execution>
+  		      <execution>
+            	<id>make-vagrant</id>
+              <phase>package</phase>
+    	        <goals>
+        	      <goal>single</goal>
+            	</goals>
+  		      	<configuration>
+    	      		<descriptors>
+        	    		<descriptor>src/main/assembly/vagrant.xml</descriptor>
+          	  	</descriptors>
+    	    	</configuration>
           </execution>
         </executions>
       </plugin>
