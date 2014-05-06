@@ -236,6 +236,7 @@
                   </target>
                 </configuration>
               </execution>
+                <!--
               <execution>
                 <id>deploy-package</id>
                 <phase>deploy</phase>
@@ -244,12 +245,12 @@
                 </goals>
                 <configuration>
                   <target>
-                    <!-- Deploy Opal package file in download repo -->
                     <copy todir="${obiba.download.dir}/opal/${opal.deploy.dir}"
                         file="target/opal-server-${project.version}-dist.zip"/>
                   </target>
                 </configuration>
               </execution>
+              -->
             </executions>
           </plugin>
         </plugins>
