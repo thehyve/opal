@@ -139,24 +139,37 @@
               </descriptors>
             </configuration>
           </execution>
-          <execution>
-            <id>make-vagrant</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <descriptors>
-                <descriptor>src/main/assembly/vagrant.xml</descriptor>
-              </descriptors>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
     </plugins>
   </build>
 
   <profiles>
+    <profile>
+        <!-- A profile for vagrant bundle -->
+        <id>vagrant-bundle</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>make-vagrant</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>single</goal>
+                            </goals>
+                            <configuration>
+                                <descriptors>
+                                    <descriptor>src/main/assembly/vagrant.xml</descriptor>
+                                </descriptors>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
     <profile>
       <!-- A profile for the builds performed by the continuous integration server -->
       <id>ci-build</id>
@@ -201,9 +214,9 @@
                     <exec executable="debuild" dir="${deb.dir}" failonerror="true" osfamily="unix">
                       <arg value="-b"/>
                       <!-- Uncomment following options to package locally  -->
-                      <!--<arg value="-i" />-->
-                      <!--<arg value="-us" />-->
-                      <!--<arg value="-uc" />-->
+                      <arg value="-i" />
+                      <arg value="-us" />
+                      <arg value="-uc" />
                     </exec>
                   </target>
                 </configuration>
