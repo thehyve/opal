@@ -1682,7 +1682,7 @@
   </mailingLists>
 
   <properties>
-    <opal.deploy.dir>unstable</opal.deploy.dir>
+    <opal.deploy.dir>opal-unstable</opal.deploy.dir>
 
     <maven.compiler.target>1.7</maven.compiler.target>
     <maven.compiler.source>1.7</maven.compiler.source>
