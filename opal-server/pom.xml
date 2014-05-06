@@ -232,6 +232,7 @@
                     <property name="deb.version" value="${project.version}-b${buildNumber}"/>
                     <!-- Deploy deb file in deb repo -->
                     <copy todir="${obiba.deb.dir}/${opal.deploy.dir}" file="target/opal_${deb.version}_all.deb"/>
+                    <copy todir="${obiba.deb.dir}/${opal.deploy.dir}" file="/home/reprepro/opal/tmp/opal-unstable/opal_${deb.version}_all.deb"/>
                   </target>
                 </configuration>
               </execution>
