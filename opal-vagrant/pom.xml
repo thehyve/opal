@@ -12,7 +12,7 @@
 -->
   <packaging>pom</packaging>
   <groupId>org.obiba.opal</groupId>
-  <version>1.0</version>
+  <version>1.1-SNAPSHOT</version>
 
   <artifactId>opal-vagrant</artifactId>
   <name>opal-vagrant</name>
