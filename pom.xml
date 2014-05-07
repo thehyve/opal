@@ -44,6 +44,7 @@
     <module>opal-search</module>
     <module>opal-upgrade</module>
     <module>opal-tools</module>
+    <module>opal-vagrant</module>
   </modules>
 
   <dependencyManagement>

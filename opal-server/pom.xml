@@ -146,31 +146,6 @@
 
   <profiles>
     <profile>
-        <!-- A profile for vagrant bundle -->
-        <id>vagrant-bundle</id>
-        <build>
-            <plugins>
-                <plugin>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>make-vagrant</id>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>single</goal>
-                            </goals>
-                            <configuration>
-                                <descriptors>
-                                    <descriptor>src/main/assembly/vagrant.xml</descriptor>
-                                </descriptors>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </build>
-    </profile>
-    <profile>
       <!-- A profile for the builds performed by the continuous integration server -->
       <id>ci-build</id>
       <build>

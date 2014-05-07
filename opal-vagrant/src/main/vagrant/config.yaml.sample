@@ -1,6 +1,10 @@
 ---
+
+# To customize the guest VM, copy this file to config.yaml and edit it. 
+# Missings properties will use the defaults, so its better to comment out/remove everything you don't need to override
+
 # Every Vagrant virtual environment requires a box to build off of.
-# For this Vagrant/Opal setup, the requirement is a Debian based with puppet installed
+# For this Vagrant/Opal setup, the requirement is a Debian based box with puppet installed
 
 box: 'ubuntu/trusty64'
 
@@ -10,7 +14,7 @@ box: 'ubuntu/trusty64'
 
 box_check_update: true
 
-# true to boot with headless mode
+# false will boot with headless mode
 box_gui: false
 
 # memory in MB of the guest VM
@@ -25,7 +29,8 @@ vm_cpus: 2
 # Each item is an array with 2 args to forward a port in the host to a port in the guest 
 # The first argument is the source host port 
 # The second argument is the target guest port
-# ATTENTION: Opal needs at least guest ports 8080 and 8443 to be forwarded to from the host
+# ATTENTION: Opal needs at least guest ports 8080 and 8443 to be forwarded to from the host.
+# So remember to always have port forwards for those, otherwise Opal cannot be used outside the VM
 
 forwarded_ports: [[8080,8080], [8443,8443]]
 
