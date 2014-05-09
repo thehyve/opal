@@ -10,9 +10,9 @@ The Vagrant/Puppet setup will also require changes if we step away from the .deb
 1. Install Vagrant from
 
     http://www.vagrantup.com/downloads
-2. Download the latest Opal Vagrant bundle from url
+2. Download the latest Opal Vagrant bundle from
 
-    [Latest Opal Vagrant](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
+    [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
 This is a very small file that only contains descriptors on how to prepare the guest VM and required dependencies and system settings<br>
 3. Unzip this file to a folder in the host machine (where you want your Vagrant image to be located).<br>
 The Vagrantfile defines some important VM settings, but most of them can be overriden locally.<br>
