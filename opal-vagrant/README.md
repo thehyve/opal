@@ -82,9 +82,18 @@ The very fist time you login in Opal, you will be presented with the 'Post-Insta
 Here you should register to the datasources created before.
 There are 2 major types of datasources (identifiers and data), and you should register at least one of each.
 
+## Opal service commands
+Opal is registered as a service, so we can run in the guest VM commands like
+
+    sudo service opal stop
+    sudo service opal start
+    sudo service opal restart
+
 ## Update opal (for Debian based box)
 
 To update opal, we just need to run in the guest VM:
 
-    apt update
-    apt upgrade opal
+    sudo apt update
+    sudo apt upgrade opal
+
+A restart on the Opal service will be needed after an upgrade
