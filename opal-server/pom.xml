@@ -145,6 +145,63 @@
   </build>
 
   <profiles>
+      <profile>
+        <id>rpm-build</id>
+        <build>
+            <plugins>
+              <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>make-rpm</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property name="rpm.dir" value="${basedir}/target/rpm"/>
+                                <property name="rpmbuild.dir" value="${rpm.dir}/rpmbuild"/>
+                                <property name="rpm.version" value="${project.version}-b${buildNumber}"/>
+
+                                <mkdir dir="${rpmbuild.dir}"/>
+                                <copy todir="${rpmbuild.dir}">
+                                    <fileset dir="src/main/rpm"/>
+                                    <filterset>
+                                        <filter token="project.version" value="${rpm.version}"/>
+                                        <!--
+                                        <filter token="date" value="${deb.date}"/>
+                                        <filter token="newrelic_version" value="${newrelic.version}"/>
+                                        -->
+                                    </filterset>
+                                </copy>
+
+                                <mkdir dir="${rpmbuild.dir}/usr/share"/>
+                                <unzip src="${basedir}/target/opal-server-${project.version}-dist.zip" dest="${rpmbuild.dir}/usr/share"/>
+
+                                <mkdir dir="${rpmbuild.dir}/etc"/>
+                                <move todir="${rpmbuild.dir}/etc/opal">
+                                    <fileset dir="${rpmbuild.dir}/usr/share/opal-server-${project.version}/conf"/>
+                                </move>
+
+                                <mkdir dir="${rpmbuild.dir}/etc"/>
+                                <move todir="${rpmbuild.dir}/etc/opal">
+                                    <fileset dir="${rpmbuild.dir}/usr/share/opal-server-${project.version}/conf"/>
+                                </move>
+
+                                <exec executable="rpmbuild" dir="${rpmbuild.dir}" failonerror="true" osfamily="unix">
+                                    <arg value="-bi"/>
+                                    <arg value="SPECS/opal.spec" />
+                                </exec>
+
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+              </plugin>
+            </plugins>
+        </build>
+      </profile>
     <profile>
       <!-- A profile for the builds performed by the continuous integration server -->
       <id>ci-build</id>
