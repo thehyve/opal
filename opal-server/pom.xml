@@ -170,7 +170,7 @@
                                 <mkdir dir="${rpmbuild.dir}/RPMS"/>
                                 <mkdir dir="${rpmbuild.dir}/SOURCES"/>
                                 <mkdir dir="${rpmbuild.dir}/SRPMS"/>
-                                
+
                                 <copy todir="${rpmbuild.dir}">
                                     <fileset dir="src/main/rpm"/>
                                     <filterset>
@@ -190,12 +190,9 @@
                                     <fileset dir="${rpmbuild.dir}/usr/share/opal-server-${project.version}/conf"/>
                                 </move>
 
-                                <mkdir dir="${rpmbuild.dir}/etc"/>
-                                <move todir="${rpmbuild.dir}/etc/opal">
-                                    <fileset dir="${rpmbuild.dir}/usr/share/opal-server-${project.version}/conf"/>
-                                </move>
-
                                 <exec executable="rpmbuild" dir="${rpmbuild.dir}" failonerror="true" osfamily="unix">
+                                    <arg value="--define"/>
+                                    <arg value="_topdir ${rpmbuild.dir}"/>
                                     <arg value="-bi"/>
                                     <arg value="SPECS/opal.spec" />
                                 </exec>

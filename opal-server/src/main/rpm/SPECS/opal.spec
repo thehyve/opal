@@ -5,9 +5,11 @@ Summary:    OBiBa Data integration Web application for biobanks
 Group:      Applications/Engineering
 License:    see /usr/share/doc/opal/copyright
 URL:        http://www.obiba.org
-Source0:
 
-BuildRequires:
+Prefix:     /usr/local
+BuildArchitectures: noarch
+
+
 Requires:   daemon java-1.7.0-openjdk
 
 %description
@@ -26,7 +28,7 @@ stand-alone applications that support particular biobank activities. The
 applications can be customized and integrated to create a complete biobank
 information management system
 
-%prep
+#%prep
 
 #Install/Erase-time Scripts
 #argument passed to %pre %post %preun and %postun is the number of other versions installed for this package, so...
@@ -47,12 +49,18 @@ information management system
 
 %autosetup
 
-%build
-%configure
-#make %{?_smp_mflags}
+#%build
+#%configure
+##make %{?_smp_mflags}
 
 %install
-%make_install
+pwd
+cp -r $RPM_BUILD_DIR/* $RPM_BUILD_ROOT
+
+#%make_install
+
+%clean
+rm -rf $RPM_BUILD_ROOT
 
 %files
 /etc/*
