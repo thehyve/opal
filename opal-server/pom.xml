@@ -165,6 +165,12 @@
                                 <property name="rpm.version" value="${project.version}-b${buildNumber}"/>
 
                                 <mkdir dir="${rpmbuild.dir}"/>
+                                <mkdir dir="${rpmbuild.dir}/BUILD"/>
+                                <mkdir dir="${rpmbuild.dir}/BUILDROOT"/>
+                                <mkdir dir="${rpmbuild.dir}/RPMS"/>
+                                <mkdir dir="${rpmbuild.dir}/SOURCES"/>
+                                <mkdir dir="${rpmbuild.dir}/SRPMS"/>
+                                
                                 <copy todir="${rpmbuild.dir}">
                                     <fileset dir="src/main/rpm"/>
                                     <filterset>
