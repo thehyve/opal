@@ -161,15 +161,16 @@
                         <configuration>
                             <target>
                                 <property name="rpm.dir" value="${basedir}/target/rpm"/>
-                                <property name="rpmbuild.dir" value="${rpm.dir}/rpmbuild"/>
+                                <property name="rpmbuild.dir" value="${rpm.dir}/BUILD"/>
                                 <property name="rpm.version" value="${project.version}_b${buildNumber}"/>
 
+                                <mkdir dir="${rpm.dir}"/>
+                                <mkdir dir="${rpm.dir}/BUILDROOT"/>
+                                <mkdir dir="${rpm.dir}/RPMS"/>
+                                <mkdir dir="${rpm.dir}/RPMS/noarch"/>
+                                <mkdir dir="${rpm.dir}/SOURCES"/>
+                                <mkdir dir="${rpm.dir}/SRPMS"/>
                                 <mkdir dir="${rpmbuild.dir}"/>
-                                <mkdir dir="${rpmbuild.dir}/BUILD"/>
-                                <mkdir dir="${rpmbuild.dir}/BUILDROOT"/>
-                                <mkdir dir="${rpmbuild.dir}/RPMS"/>
-                                <mkdir dir="${rpmbuild.dir}/SOURCES"/>
-                                <mkdir dir="${rpmbuild.dir}/SRPMS"/>
 
                                 <copy todir="${rpmbuild.dir}">
                                     <fileset dir="src/main/rpm"/>
@@ -192,7 +193,7 @@
 
                                 <exec executable="rpmbuild" dir="${rpmbuild.dir}" failonerror="true" osfamily="unix">
                                     <arg value="--define"/>
-                                    <arg value="_topdir ${rpmbuild.dir}"/>
+                                    <arg value="_topdir ${rpm.dir}"/>
                                     <arg value="--buildroot"/>
                                     <arg value="${rpmbuild.dir}/BUILDROOT"/>
                                     <arg value="-bi"/>
@@ -208,8 +209,7 @@
         </build>
       </profile>
     <profile>
-      <!-- A profile for the builds performed by the continuous integration server -->
-      <id>ci-build</id>
+      <id>deb-build</id>
       <build>
         <plugins>
           <plugin>
