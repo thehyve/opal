@@ -195,7 +195,7 @@
                                     <arg value="--define"/>
                                     <arg value="_topdir ${rpm.dir}"/>
                                     <arg value="--buildroot"/>
-                                    <arg value="${rpmbuild.dir}/BUILDROOT"/>
+                                    <arg value="${rpm.dir}/BUILDROOT"/>
                                     <arg value="-bi"/>
                                     <arg value="SPECS/opal.spec" />
                                 </exec>
