@@ -64,7 +64,7 @@ echo "clean cwd is $(pwd)"
 
 %files
 /etc/opal
-/usr/share/@project.version@
+/usr/share/@opal.dir@
 %dir /var/lib/opal
 %dir /var/log/opal
 %dir /tmp/opal

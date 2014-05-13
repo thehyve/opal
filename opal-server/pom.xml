@@ -160,9 +160,11 @@
                         </goals>
                         <configuration>
                             <target>
+                                <property name="opal.dir" value="opal-server-${project.version}"/>
                                 <property name="rpm.dir" value="${basedir}/target/rpm"/>
                                 <property name="rpmbuild.dir" value="${rpm.dir}/BUILD"/>
                                 <property name="rpm.version" value="${project.version}_b${buildNumber}"/>
+                                <format property="date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en"/>
 
                                 <mkdir dir="${rpm.dir}"/>
                                 <mkdir dir="${rpm.dir}/BUILDROOT"/>
@@ -176,6 +178,7 @@
                                     <fileset dir="src/main/rpm"/>
                                     <filterset>
                                         <filter token="project.version" value="${rpm.version}"/>
+                                        <filter token="opal.dir" value="${opal.dir}"/>
                                         <!--
                                         <filter token="date" value="${deb.date}"/>
                                         <filter token="newrelic_version" value="${newrelic.version}"/>
@@ -190,6 +193,15 @@
                                 <move todir="${rpmbuild.dir}/etc/opal">
                                     <fileset dir="${rpmbuild.dir}/usr/share/opal-server-${project.version}/conf"/>
                                 </move>
+
+                                <mkdir dir="${rpmbuild.dir}/usr/share/doc/opal"/>
+                                <copy todir="${rpmbuild.dir}/usr/share/doc/opal">
+                                    <fileset dir="src/main/deb/changelog"/>
+                                    <fileset dir="src/main/rpm/copyright"/>
+                                    <filterset>
+                                        <filter token="date" value="${date}"/>
+                                    </filterset>
+                                </copy>
 
                                 <exec executable="rpmbuild" dir="${rpm.dir}" failonerror="true" osfamily="unix">
                                     <arg value="--define"/>
