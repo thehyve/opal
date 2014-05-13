@@ -199,8 +199,8 @@
 
                                 <mkdir dir="${rpmbuild.dir}/usr/share/doc/opal"/>
                                 <copy todir="${rpmbuild.dir}/usr/share/doc/opal">
-                                    <fileset dir="src/main/deb/debian/changelog"/>
-                                    <fileset dir="src/main/rpm/copyright"/>
+                                    <fileset file="src/main/deb/debian/changelog"/>
+                                    <fileset file="src/main/rpm/copyright"/>
                                     <!--
                                     <filterset>
                                         <filter token="date" value="${date}"/>

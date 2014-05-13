@@ -55,6 +55,9 @@ pwd
 
 mkdir -p "$RPM_BUILD_ROOT"
 cp -r * "$RPM_BUILD_ROOT"
+mkdir -p "$RPM_BUILD_ROOT"/var/lib/opal
+mkdir -p "$RPM_BUILD_ROOT"/var/log/opal
+mkdir -p "$RPM_BUILD_ROOT"/tmp/opal
 ls "$RPM_BUILD_ROOT"
 
 %clean
