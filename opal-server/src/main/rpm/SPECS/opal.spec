@@ -1,6 +1,6 @@
 Name:       opal
-Version:    @project.version@
-Release:	1%{?dist}
+Version:    2.2_SNAPSHOT_b20140512175607
+Release:    1%{?dist}
 Summary:    OBiBa Data integration Web application for biobanks
 Group:      Applications/Engineering
 License:    see /usr/share/doc/opal/copyright
@@ -8,7 +8,6 @@ URL:        http://www.obiba.org
 
 Prefix:     /usr/local
 BuildArchitectures: noarch
-
 
 Requires:   daemon java-1.7.0-openjdk
 
@@ -50,26 +49,27 @@ information management system
 %autosetup
 
 #%build
-#%configure
-##make %{?_smp_mflags}
 
 %install
 pwd
-cp -r $RPM_BUILD_DIR/* $RPM_BUILD_ROOT
 
-#%make_install
+mkdir -p "$RPM_BUILD_ROOT"
+cp -r * "$RPM_BUILD_ROOT"
+ls "$RPM_BUILD_ROOT"
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+echo "clean cwd is $(pwd)"
+#rm -rf "$RPM_BUILD_ROOT"
+
 
 %files
-/etc/*
-/usr/share/*
-/var/lib/opal/*
-/var/log/opal/*
-/tmp/opal/*
+/etc/opal
+/usr/share/@project.version@
+%dir /var/lib/opal
+%dir /var/log/opal
+%dir /tmp/opal
 
 %doc
-#/usr/share/doc/*
+/usr/share/doc/opal
 
 %changelog

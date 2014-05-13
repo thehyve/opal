@@ -162,7 +162,7 @@
                             <target>
                                 <property name="rpm.dir" value="${basedir}/target/rpm"/>
                                 <property name="rpmbuild.dir" value="${rpm.dir}/rpmbuild"/>
-                                <property name="rpm.version" value="${project.version}-b${buildNumber}"/>
+                                <property name="rpm.version" value="${project.version}_b${buildNumber}"/>
 
                                 <mkdir dir="${rpmbuild.dir}"/>
                                 <mkdir dir="${rpmbuild.dir}/BUILD"/>
@@ -193,6 +193,8 @@
                                 <exec executable="rpmbuild" dir="${rpmbuild.dir}" failonerror="true" osfamily="unix">
                                     <arg value="--define"/>
                                     <arg value="_topdir ${rpmbuild.dir}"/>
+                                    <arg value="--buildroot"/>
+                                    <arg value="${rpmbuild.dir}/BUILDROOT"/>
                                     <arg value="-bi"/>
                                     <arg value="SPECS/opal.spec" />
                                 </exec>
