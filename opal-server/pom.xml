@@ -164,7 +164,10 @@
                                 <property name="rpm.dir" value="${basedir}/target/rpm"/>
                                 <property name="rpmbuild.dir" value="${rpm.dir}/BUILD"/>
                                 <property name="rpm.version" value="${project.version}_b${buildNumber}"/>
-                                <format property="date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en"/>
+                                <tstamp>
+                                    <format property="date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en"/>
+                                </tstamp>
+
 
                                 <mkdir dir="${rpm.dir}"/>
                                 <mkdir dir="${rpm.dir}/BUILDROOT"/>
