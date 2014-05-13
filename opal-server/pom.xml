@@ -164,11 +164,11 @@
                                 <property name="rpm.dir" value="${basedir}/target/rpm"/>
                                 <property name="rpmbuild.dir" value="${rpm.dir}/BUILD"/>
                                 <property name="rpm.version" value="${project.version}_b${buildNumber}"/>
+                                <!--
                                 <tstamp>
                                     <format property="date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en"/>
                                 </tstamp>
-
-
+                                -->
                                 <mkdir dir="${rpm.dir}"/>
                                 <mkdir dir="${rpm.dir}/BUILDROOT"/>
                                 <mkdir dir="${rpm.dir}/RPMS"/>
@@ -201,9 +201,11 @@
                                 <copy todir="${rpmbuild.dir}/usr/share/doc/opal">
                                     <fileset dir="src/main/deb/changelog"/>
                                     <fileset dir="src/main/rpm/copyright"/>
+                                    <!--
                                     <filterset>
                                         <filter token="date" value="${date}"/>
                                     </filterset>
+                                    -->
                                 </copy>
 
                                 <exec executable="rpmbuild" dir="${rpm.dir}" failonerror="true" osfamily="unix">
