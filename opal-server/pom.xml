@@ -191,7 +191,7 @@
                                     <fileset dir="${rpmbuild.dir}/usr/share/opal-server-${project.version}/conf"/>
                                 </move>
 
-                                <exec executable="rpmbuild" dir="${rpmbuild.dir}" failonerror="true" osfamily="unix">
+                                <exec executable="rpmbuild" dir="${rpm.dir}" failonerror="true" osfamily="unix">
                                     <arg value="--define"/>
                                     <arg value="_topdir ${rpm.dir}"/>
                                     <arg value="--buildroot"/>
