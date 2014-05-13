@@ -172,7 +172,7 @@
                                 <mkdir dir="${rpm.dir}/SRPMS"/>
                                 <mkdir dir="${rpmbuild.dir}"/>
 
-                                <copy todir="${rpmbuild.dir}">
+                                <copy todir="${rpm.dir}">
                                     <fileset dir="src/main/rpm"/>
                                     <filterset>
                                         <filter token="project.version" value="${rpm.version}"/>
