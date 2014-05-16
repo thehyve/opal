@@ -16,8 +16,17 @@ import opal.import_ids
 import opal.import_idsmap
 import opal.export_xml
 import opal.export_csv
+import opal.copy_table
+import opal.delete_table
 import opal.user
 import opal.group
+import opal.perm_project
+import opal.perm_datasource
+import opal.perm_table
+import opal.perm_variable
+import opal.perm_r
+import opal.perm_datashield
+import opal.perm_system
 import opal.system
 import opal.security.encrypt
 import opal.security.decrypt
@@ -74,14 +83,23 @@ add_subcommand('export-xml', 'Export data to a zip of Opal XML files.', opal.exp
                opal.export_xml.do_command)
 add_subcommand('export-csv', 'Export data to a folder of CSV files.', opal.export_csv.add_arguments,
                opal.export_csv.do_command)
+add_subcommand('copy-table', 'Copy a table into another table.', opal.copy_table.add_arguments, opal.copy_table.do_command)
+add_subcommand('delete-table', 'Delete some tables.', opal.delete_table.add_arguments, opal.delete_table.do_command)
 add_subcommand('user', 'Manage users.', opal.user.add_arguments, opal.user.do_command)
 add_subcommand('group', 'Manage groups.', opal.group.add_arguments, opal.group.do_command)
+add_subcommand('perm-project', 'Apply permission on a project.', opal.perm_project.add_arguments, opal.perm_project.do_command)
+add_subcommand('perm-datasource', 'Apply permission on a datasource.', opal.perm_datasource.add_arguments, opal.perm_datasource.do_command)
+add_subcommand('perm-table', 'Apply permission on a set of tables.', opal.perm_table.add_arguments, opal.perm_table.do_command)
+add_subcommand('perm-variable', 'Apply permission on a set of variables.', opal.perm_variable.add_arguments, opal.perm_variable.do_command)
+add_subcommand('perm-r', 'Apply R permission.', opal.perm_r.add_arguments, opal.perm_r.do_command)
+add_subcommand('perm-datashield', 'Apply DataSHIELD permission.', opal.perm_datashield.add_arguments, opal.perm_datashield.do_command)
+add_subcommand('perm-system', 'Apply system permission.', opal.perm_system.add_arguments, opal.perm_system.do_command)
 add_subcommand('system', 'Query for system status and configuration', opal.system.add_arguments, opal.system.do_command)
 add_subcommand('rest', 'Request directly the Opal REST API, for advanced users.', opal.rest.add_arguments,
                opal.rest.do_command)
-add_subcommand('encrypt', "Encrypt string using Opal's secret key", opal.security.encrypt.add_arguments,
+add_subcommand('encrypt', "Encrypt string using Opal's secret key.", opal.security.encrypt.add_arguments,
                opal.security.encrypt.do_command)
-add_subcommand('decrypt', "Decrypt string using Opal's secret key", opal.security.decrypt.add_arguments,
+add_subcommand('decrypt', "Decrypt string using Opal's secret key.", opal.security.decrypt.add_arguments,
                opal.security.decrypt.do_command)
 
 

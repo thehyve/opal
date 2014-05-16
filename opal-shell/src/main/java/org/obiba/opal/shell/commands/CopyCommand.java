@@ -22,6 +22,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.obiba.magma.Datasource;
+import org.obiba.magma.DatasourceCopierProgressListener;
 import org.obiba.magma.MagmaEngine;
 import org.obiba.magma.NoSuchDatasourceException;
 import org.obiba.magma.NoSuchValueTableException;
@@ -92,13 +93,14 @@ public class CopyCommand extends AbstractOpalRuntimeDependentCommand<CopyCommand
         for(ValueTable table : tables) {
           if(destinationDatasource.getName().equals(table.getDatasource().getName()) &&
               destinationDatasource.hasValueTable(table.getName())) {
-            throw new IllegalArgumentException("Cannot copy a table into itself: " + table.getName());
+            if(tables.size() > 1 || tables.size() == 1 && !options.isName())
+              throw new IllegalArgumentException("Cannot copy a table into itself: " + table.getName());
           }
         }
         getShell().printf("Copying tables [%s] to %s.\n", getTableNames(), destinationDatasource.getName());
         dataExportService
             .exportTablesToDatasource(options.isUnit() ? options.getUnit() : null, tables, destinationDatasource,
-                buildDatasourceCopier(destinationDatasource), !options.getNonIncremental());
+                buildDatasourceCopier(destinationDatasource), !options.getNonIncremental(), new CopyProgressListener());
         getShell().printf("Successfully copied all tables.\n");
         errorCode = CommandResultCode.SUCCESS;
       } catch(Exception e) {
@@ -218,6 +220,8 @@ public class CopyCommand extends AbstractOpalRuntimeDependentCommand<CopyCommand
 
     if(names.size() == 1 && options.isName()) {
       String originalName = names.keySet().iterator().next();
+      if(originalName.equals(options.getDestination() + "." + options.getName()))
+        throw new IllegalArgumentException("Cannot copy a table into itself: " + originalName);
       names.put(originalName, new RenameValueTable(options.getName(), names.get(originalName)));
     }
 
@@ -332,7 +336,7 @@ public class CopyCommand extends AbstractOpalRuntimeDependentCommand<CopyCommand
       directory.createFolder();
     }
 
-    if (Strings.isNullOrEmpty(outputFile.getName().getExtension())) {
+    if(Strings.isNullOrEmpty(outputFile.getName().getExtension())) {
       outputFile.createFolder();
     }
 
@@ -520,6 +524,19 @@ public class CopyCommand extends AbstractOpalRuntimeDependentCommand<CopyCommand
         return new NullDatasource("/dev/null");
       }
       return null;
+    }
+  }
+
+  private class CopyProgressListener implements DatasourceCopierProgressListener {
+
+    private int currentPercentComplete = -1;
+
+    @Override
+    public void status(String message, long entitiesCopied, long entitiesToCopy, int percentComplete) {
+      if(percentComplete != currentPercentComplete) {
+        getShell().progress(message, entitiesCopied, entitiesToCopy, percentComplete);
+        currentPercentComplete = percentComplete;
+      }
     }
   }
 }

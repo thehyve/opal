@@ -85,6 +85,14 @@ public interface Translations extends Constants {
   @DefaultStringValue("Stop")
   String stopLabel();
 
+  @Description("Resume label")
+  @DefaultStringValue("Resume")
+  String resumeLabel();
+
+  @Description("Suspend label")
+  @DefaultStringValue("Suspend")
+  String suspendLabel();
+
   @Description("End label")
   @DefaultStringValue("End")
   String endLabel();
@@ -362,6 +370,7 @@ public interface Translations extends Constants {
       "ScriptIsRequired", "A script is required.",//
       "JavascriptError", "Error in script '{0}': {1} ({2}:{3})",//
       "JavaScriptException", "Error in script: {0}",//
+      "ValuesEvaluationError", "Error when evaluating values: {0}",//
       "CopyFromVariableNameIsRequired",
       "You must enter the name of a variable from which the new variable will be created from.",//
       "cannotSwitchTabBecauseOfUnsavedChanges",
@@ -2289,4 +2298,8 @@ public interface Translations extends Constants {
   @Description("No Filter comment")
   @DefaultStringValue("no filter")
   String noFilter();
+
+  @Description("No Tables for EntityType label")
+  @DefaultStringValue("No tables for this entity type.")
+  String noTablesforEntityType();
 }

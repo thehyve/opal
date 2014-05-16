@@ -20,7 +20,7 @@ def add_import_arguments(parser):
 
 class OpalImporter:
     """
-    OpalImporter takes care of submitting a import job.
+    OpalImporter takes care of submitting an import job.
     """
 
     class ExtensionFactoryInterface:
@@ -149,7 +149,7 @@ class OpalImporter:
 
 class OpalExporter:
     """
-    OpalExporter takes care of submitting a import job.
+    OpalExporter takes care of submitting an export job.
     """
 
     @classmethod
@@ -190,7 +190,7 @@ class OpalExporter:
             print options
             print "**"
 
-        # submit data import job
+        # submit data export job
         request = self.client.new_request()
         request.fail_on_error().accept_json().content_type_protobuf()
 
@@ -198,6 +198,66 @@ class OpalExporter:
             request.verbose()
 
         uri = opal.core.UriBuilder(['project', self.datasource, 'commands', '_export']).build()
+        response = request.post().resource(uri).content(options.SerializeToString()).send()
+
+        # get job status
+        job_resource = re.sub(r'http.*\/ws', r'', response.headers['Location'])
+        request = self.client.new_request()
+        request.fail_on_error().accept_json()
+        return request.get().resource(job_resource).send()
+
+class OpalCopier:
+    """
+    OpalCopier takes care of submitting a copy job.
+    """
+
+    @classmethod
+    def build(cls, client, datasource, tables, destination, name, incremental=False, nulls=False, verbose=None):
+        setattr(cls, 'client', client)
+        setattr(cls, 'datasource', datasource)
+        setattr(cls, 'tables', tables)
+        setattr(cls, 'destination', destination)
+        setattr(cls, 'name', name)
+        setattr(cls, 'incremental', incremental)
+        setattr(cls, 'nulls', nulls)
+        setattr(cls, 'verbose', verbose)
+        return cls()
+
+    def setClient(self, client):
+        self.client = client
+        return self
+
+    def submit(self):
+        # copy options
+        options = opal.protobuf.Commands_pb2.CopyCommandOptionsDto()
+        options.destination = self.destination
+        options.nonIncremental = not self.incremental
+        options.noVariables = False
+        options.noValues = False
+        options.copyNullValues = self.nulls
+        if self.tables:
+            tables2copy = self.tables
+
+            def table_fullname(t): return self.datasource + '.' + t
+
+            options.tables.extend(map(table_fullname, tables2copy))
+        # name option will be ignored if more than one table
+        if self.name:
+            options.destinationTableName = self.name
+
+        if self.verbose:
+            print "** Copy options:"
+            print options
+            print "**"
+
+        # submit data copy job
+        request = self.client.new_request()
+        request.fail_on_error().accept_json().content_type_protobuf()
+
+        if self.verbose:
+            request.verbose()
+
+        uri = opal.core.UriBuilder(['project', self.datasource, 'commands', '_copy']).build()
         response = request.post().resource(uri).content(options.SerializeToString()).send()
 
         # get job status
