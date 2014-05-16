@@ -9,7 +9,7 @@ URL:        http://www.obiba.org
 Prefix:     /usr/local
 BuildArchitectures: noarch
 
-Requires:   daemon java-1.7.0-openjdk
+Requires:   java-1.7.0-openjdk
 
 %description
 Opal is OBiBa?s core database application for biobanks. Participant data, once

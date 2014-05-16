@@ -24,8 +24,8 @@ import org.obiba.opal.web.gwt.app.client.ui.celltable.ActionHandler;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.ActionsIndexColumn;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.ActionsProvider;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.CheckboxColumn;
-import org.obiba.opal.web.gwt.app.client.ui.celltable.IndexStatusImageCell;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.PlaceRequestCell;
+import org.obiba.opal.web.gwt.app.client.ui.celltable.StatusImageCell;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.ValueRenderer;
 import org.obiba.opal.web.model.client.opal.TableIndexStatusDto;
 
@@ -61,6 +61,9 @@ import static org.obiba.opal.web.model.client.opal.ScheduleType.MINUTES_30;
 import static org.obiba.opal.web.model.client.opal.ScheduleType.MINUTES_5;
 import static org.obiba.opal.web.model.client.opal.ScheduleType.NOT_SCHEDULED;
 import static org.obiba.opal.web.model.client.opal.ScheduleType.WEEKLY;
+import static org.obiba.opal.web.model.client.opal.TableIndexationStatus.IN_PROGRESS;
+import static org.obiba.opal.web.model.client.opal.TableIndexationStatus.OUTDATED;
+import static org.obiba.opal.web.model.client.opal.TableIndexationStatus.UPTODATE;
 
 public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrationUiHandlers>
     implements IndexAdministrationPresenter.Display {
@@ -75,6 +78,9 @@ public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrat
   Button startStopButton;
 
   @UiField
+  Button enableButton;
+
+  @UiField
   Button configureButton;
 
   @UiField
@@ -82,6 +88,9 @@ public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrat
 
   @UiField
   OpalSimplePager indexTablePager;
+
+  @UiField
+  Panel indexPanel;
 
   @UiField
   Alert selectAllAlert;
@@ -118,6 +127,8 @@ public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrat
 
   private Status status;
 
+  private boolean enabled;
+
   @Inject
   public IndexAdministrationView(Binder uiBinder, PlaceManager placeManager, TranslationMessages translationMessages) {
     this.placeManager = placeManager;
@@ -141,7 +152,8 @@ public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrat
           public String[] getActions(TableIndexStatusDto value) {
             return allActions();
           }
-        });
+        }
+    );
 
     indexTable.addColumn(checkboxColumn, checkboxColumn.getCheckColumnHeader());
     indexTable.addColumn(new DatasourceColumn(), translations.projectLabel());
@@ -172,6 +184,12 @@ public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrat
   public void onStartStop(ClickEvent event) {
     if(status == Status.Startable) getUiHandlers().start();
     else getUiHandlers().stop();
+  }
+
+  @UiHandler("enableButton")
+  public void onSuspendResume(ClickEvent event) {
+    if(enabled) getUiHandlers().suspend();
+    else getUiHandlers().resume();
   }
 
   @UiHandler("refreshIndicesButton")
@@ -234,6 +252,15 @@ public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrat
         enableActions(false);
         break;
     }
+  }
+
+  @Override
+  public void setEnabled(boolean enabled) {
+    this.enabled = enabled;
+    enableButton.setText(enabled ? translations.suspendLabel() : translations.resumeLabel());
+    indexPanel.setVisible(enabled);
+    indexTablePager.setVisible(enabled);
+    refreshIndicesButton.setVisible(enabled);
   }
 
   private void enableStart(boolean enable) {
@@ -400,11 +427,30 @@ public class IndexAdministrationView extends ViewWithUiHandlers<IndexAdministrat
 
   private static class StatusColumn extends Column<TableIndexStatusDto, String> {
 
-    private StatusColumn() {super(new IndexStatusImageCell());}
+    private StatusColumn() {super(new StatusImageCell());}
 
     @Override
-    public String getValue(TableIndexStatusDto tableIndexStatusDto) {
-      return IndexStatusImageCell.getSrc(tableIndexStatusDto);
+    public String getValue(TableIndexStatusDto dto) {
+      // In progress
+      if(dto.getStatus().getName().equals(IN_PROGRESS.getName())) {
+        return translations.indexInProgress() + ":" + (int) (dto.getProgress() * 100) + "%";
+      }
+      // Up to date
+      if(dto.getStatus().getName().equals(UPTODATE.getName())) {
+        return translations.indexUpToDate() + ":" + StatusImageCell.BULLET_GREEN;
+      }
+      // Out dated but scheduled
+      if(dto.getStatus().getName().equals(OUTDATED.getName()) &&
+          !dto.getSchedule().getType().isScheduleType(NOT_SCHEDULED)) {
+        return translations.indexOutdatedScheduled() + ":" + StatusImageCell.BULLET_ORANGE;
+      }
+      // Out dated but not scheduled
+      if(dto.getStatus().getName().equals(OUTDATED.getName()) &&
+          dto.getSchedule().getType().isScheduleType(NOT_SCHEDULED)) {
+        return translations.indexOutdatedNotScheduled() + ":" + StatusImageCell.BULLET_RED;
+      }
+      // Unknown status
+      return translations.indexNotScheduled() + ":" + StatusImageCell.BULLET_BLACK;
     }
   }
 }

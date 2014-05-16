@@ -18,13 +18,13 @@ import org.obiba.opal.web.gwt.app.client.ui.celltable.ActionsColumn;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.ActionsProvider;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.HasActionHandler;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.PlaceRequestCell;
+import org.obiba.opal.web.gwt.app.client.ui.celltable.StatusImageCell;
 import org.obiba.opal.web.gwt.datetime.client.Duration;
 import org.obiba.opal.web.gwt.datetime.client.FormatType;
 import org.obiba.opal.web.gwt.datetime.client.Moment;
 import org.obiba.opal.web.model.client.opal.CommandStateDto;
 
 import com.github.gwtbootstrap.client.ui.Button;
-import com.google.gwt.cell.client.Cell;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -177,19 +177,7 @@ public class TasksView extends ViewImpl implements Display {
       }
     }, translations.endLabel());
 
-    table.addColumn(new TextColumn<CommandStateDto>() {
-      @Override
-      public String getValue(CommandStateDto object) {
-        String status = object.getStatus();
-        if(translations.statusMap().containsKey(status)) {
-          return translations.statusMap().get(status);
-        }
-        if(translations.userMessageMap().containsKey(status)) {
-          return translations.userMessageMap().get(status);
-        }
-        return status;
-      }
-    }, translations.statusLabel());
+    table.addColumn(new StatusColumn(), translations.statusLabel());
 
     actionsColumn = new ActionsColumn<CommandStateDto>(new ActionsProvider<CommandStateDto>() {
 
@@ -225,6 +213,44 @@ public class TasksView extends ViewImpl implements Display {
     @Override
     public String getValue(CommandStateDto object) {
       return object.getProject();
+    }
+  }
+
+  private static class StatusColumn extends Column<CommandStateDto, String> {
+
+    private StatusColumn() {super(new StatusImageCell());}
+
+    @Override
+    public String getValue(CommandStateDto dto) {
+      // In progress
+      if(dto.getStatus().equals(CommandStateDto.Status.IN_PROGRESS.getName())) {
+        if(dto.hasProgress()) return dto.getProgress().getMessage() + ":" + dto.getProgress().getPercent() + "%";
+        else return translations.statusMap().get(CommandStateDto.Status.IN_PROGRESS.getName()) + ":" +
+            StatusImageCell.BULLET_BLACK;
+      }
+      // Success
+      if(dto.getStatus().equals(CommandStateDto.Status.SUCCEEDED.getName())) {
+        return translations.statusMap().get(CommandStateDto.Status.SUCCEEDED.getName()) + ":" +
+            StatusImageCell.BULLET_GREEN;
+      }
+      // Failed
+      if(dto.getStatus().equals(CommandStateDto.Status.FAILED.getName())) {
+        return translations.statusMap().get(CommandStateDto.Status.FAILED.getName()) + ":" +
+            StatusImageCell.BULLET_RED;
+      }
+      // Cancelled
+      if(dto.getStatus().equals(CommandStateDto.Status.CANCELED.getName())) {
+        return translations.statusMap().get(CommandStateDto.Status.CANCELED.getName()) + ":" +
+            StatusImageCell.BULLET_ORANGE;
+      }
+      // Cancelled pending
+      if(dto.getStatus().equals(CommandStateDto.Status.CANCEL_PENDING.getName())) {
+        return translations.statusMap().get(CommandStateDto.Status.CANCEL_PENDING.getName()) + ":" +
+            StatusImageCell.BULLET_BLACK;
+      }
+      // Other
+      return translations.statusMap().get(CommandStateDto.Status.NOT_STARTED.getName()) + ":" +
+          StatusImageCell.BULLET_BLACK;
     }
   }
 }
