@@ -12,7 +12,8 @@
   <name>opal-server</name>
 
     <properties>
-        <opal.dir>/usr/share/opal-server-${project.version}</opal.dir>
+        <install.dir>/usr/share</install.dir>
+        <opal.dir>${install.dir}/opal-server-${project.version}</opal.dir>
         <war.expanded>${project.build.directory}/war_expanded</war.expanded>
     </properties>
 
@@ -128,7 +129,6 @@
   </dependencies>
 
   <build>
-      <!--
     <plugins>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -148,7 +148,6 @@
         </executions>
       </plugin>
     </plugins>
-    -->
   </build>
 
   <profiles>
@@ -244,9 +243,37 @@
                               <filemode>640</filemode>
                               <username>opal</username>
                               <groupname>adm</groupname>
+                              <configuration>true</configuration>
                               <sources>
                                   <source>
                                       <location>src/main/conf</location>
+                                  </source>
+                              </sources>
+                          </mapping>
+                          <mapping>
+                              <directory>/etc/init</directory>
+                              <filemode>644</filemode>
+                              <username>root</username>
+                              <groupname>root</groupname>
+                              <directoryIncluded>false</directoryIncluded>
+                              <sources>
+                                  <source>
+                                      <location>src/main/rpm/upstart.conf</location>
+                                      <destination>opal.conf</destination>
+                                  </source>
+                              </sources>
+                          </mapping>
+                          <mapping>
+                              <directory>/etc/default</directory>
+                              <filemode>644</filemode>
+                              <username>root</username>
+                              <groupname>root</groupname>
+                              <directoryIncluded>false</directoryIncluded>
+                              <sources>
+                                  <source>
+                                      <location>src/main/rpm/opal.default</location>
+                                      <destination>opal</destination>
+                                      <filter>true</filter>
                                   </source>
                               </sources>
                           </mapping>
@@ -256,11 +283,19 @@
                               <filemode>440</filemode>
                               <username>root</username>
                               <groupname>root</groupname>
+                              <sources>
+                                  <source>
+                                      <location>${project.build.directory}/${project.artifactId}-${project.version}.jar</location>
+                                  </source>
+                              </sources>
                               <dependency>
                                   <excludes>
                                       <exclude>org.obiba.opal:opal-gwt-client:*</exclude>
+                                      <!--
+                                      not possible to filtering these here, so we have to do it in a different way
                                       <exclude>org.obiba.opal:opal-reporting:zip:dist</exclude>
                                       <exclude>org.obiba.opal.tools:password-hasher:jar:cli</exclude>
+                                      -->
                                       <exclude>org.apache.shiro.tools:shiro-tools-hasher:*</exclude>
                                   </excludes>
                               </dependency>
@@ -295,6 +330,7 @@
                               <filemode>755</filemode>
                               <username>opal</username>
                               <groupname>adm</groupname>
+                              <documentation>true</documentation>
                               <sources>
                                   <source>
                                       <location>src/main/deb/debian/changelog</location>
@@ -330,6 +366,18 @@
                           <scriptFile>src/main/rpm/preinstall.sh</scriptFile>
                           <fileEncoding>utf-8</fileEncoding>
                       </preinstallScriptlet>
+                      <postinstallScriptlet>
+                          <script>
+                              ln -s ${opal.dir} ${install.dir}/opal
+                              ln -s /etc/opal /var/lib/opal/conf
+                          </script>
+                      </postinstallScriptlet>
+                      <preremoveScriptlet>
+                          <script>
+                              rm -f ${install.dir}/opal
+                              rm -f /var/lib/opal/conf
+                          </script>
+                      </preremoveScriptlet>
                   </configuration>
               </plugin>
             </plugins>
