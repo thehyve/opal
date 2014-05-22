@@ -1654,6 +1654,18 @@
     </pluginRepository>
   </pluginRepositories>
 
+    <distributionManagement>
+        <repository>
+            <id>repo.thehyve.nl-snapshots</id>
+            <url>http://repo.thehyve.nl/content/repositories/snapshots</url>
+        </repository>
+        <snapshotRepository>
+            <id>repo.thehyve.nl-releases</id>
+            <url>http://repo.thehyve.nl/content/repositories/releases</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+<!--
   <distributionManagement>
 
     <repository>
@@ -1684,7 +1696,7 @@
     <system>Jenkins</system>
     <url>http://ci.obiba.org/view/Opal/job/Opal</url>
   </ciManagement>
-
+-->
   <mailingLists>
     <mailingList>
       <name>OBiBa Users</name>
