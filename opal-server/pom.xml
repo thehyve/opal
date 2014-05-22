@@ -383,7 +383,7 @@
         </build>
           <distributionManagement>
               <repository>
-                  <id>snapshots</id>
+                  <id>repo.hyve.nl-snapshots</id>
                   <name>Snapshot Repository</name>
                   <url>http://repo.thehyve.nl/content/repositories/snapshots/</url>
               </repository>
