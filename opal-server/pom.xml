@@ -188,7 +188,7 @@
                       <execution>
                           <id>generate-rpm</id>
                           <goals>
-                              <goal>rpm</goal>
+                              <goal>attached-rpm</goal>
                           </goals>
                       </execution>
                   </executions>
@@ -381,6 +381,14 @@
               </plugin>
             </plugins>
         </build>
+          <distributionManagement>
+              <repository>
+                  <id>snapshots</id>
+                  <name>Snapshot Repository</name>
+                  <url>http://repo.thehyve.nl/content/repositories/snapshots/</url>
+              </repository>
+          </distributionManagement>
+
       </profile>
     <profile>
       <id>deb-build</id>
@@ -450,7 +458,6 @@
           </plugin>
         </plugins>
       </build>
-
     </profile>
   </profiles>
 
