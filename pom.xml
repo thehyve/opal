@@ -1656,12 +1656,12 @@
 
     <distributionManagement>
         <repository>
-            <id>repo.thehyve.nl-snapshots</id>
-            <url>http://repo.thehyve.nl/content/repositories/snapshots</url>
-        </repository>
-        <snapshotRepository>
             <id>repo.thehyve.nl-releases</id>
             <url>http://repo.thehyve.nl/content/repositories/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>repo.thehyve.nl-snapshots</id>
+            <url>http://repo.thehyve.nl/content/repositories/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
 
