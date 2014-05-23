@@ -377,10 +377,10 @@
                       <preremoveScriptlet>
                           <script>
                               # only removes symlinks if uninstalling
-                              if [ "$1" = "0" ]; then
-                                rm -f ${install.dir}/opal
-                                rm -f /var/lib/opal/conf
-                              fi
+                              #if [ "$1" = "0" ]; then
+                              #  rm -f ${install.dir}/opal
+                              #  rm -f /var/lib/opal/conf
+                              #fi
                           </script>
                       </preremoveScriptlet>
                   </configuration>
