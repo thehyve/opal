@@ -199,11 +199,6 @@
                       <prefix>/usr/share</prefix>
                       <changelogFile>/usr/share/changelog</changelogFile>
                       <targetOS>Linux</targetOS>
-                      <!--
-                      <defineStatements>
-                          <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
-                      </defineStatements>
-                      -->
                       <requires>
                           <require>java-1.7.0-openjdk</require>
                       </requires>
@@ -376,7 +371,7 @@
                       </postinstallScriptlet>
                       <preremoveScriptlet>
                           <script>
-                              # only removes symlinks if uninstalling
+                              # only removes symlinks if uninstalling (NOT WORKING YET)
                               #if [ "$1" = "0" ]; then
                               #  rm -f ${install.dir}/opal
                               #  rm -f /var/lib/opal/conf

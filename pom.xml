@@ -1673,27 +1673,6 @@
     </scm>
 
     <!--
-      <distributionManagement>
-
-        <repository>
-          <id>obiba-releases</id>
-          <url>http://repo.obiba.org/libs-release-local</url>
-        </repository>
-
-        <snapshotRepository>
-          <id>obiba-snapshots</id>
-          <url>http://repo.obiba.org/libs-snapshot-local</url>
-        </snapshotRepository>
-
-      </distributionManagement>
-
-      <scm>
-        <connection>scm:git:git://github.com/obiba/opal.git</connection>
-        <developerConnection>scm:git:https://github.com/obiba/opal.git</developerConnection>
-        <url>https://github.com/obiba/opal</url>
-        <tag>opal-2.2.x</tag>
-      </scm>
-
       <issueManagement>
         <system>JIRA</system>
         <url>http://jira.obiba.org</url>
