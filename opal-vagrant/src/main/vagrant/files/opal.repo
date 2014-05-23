@@ -1,0 +1,9 @@
+[opal]
+name=Public Repositories
+baseurl=https://repo.thehyve.nl/content/groups/public
+enabled=1
+protect=0
+gpgcheck=0
+metadata_expire=30s
+autorefresh=1
+type=rpm-md

@@ -6,7 +6,9 @@ def parse_vagrant_config(
 )
   require 'yaml'
   config = {
-  	'box'				=> 'ubuntu/trusty64',
+    'name'              => 'opal-server',
+    'distro'            => 'redhat',
+  	'box'				=> 'puppetlabs/centos-6.5-64-puppet',
     'box_check_update'	=> true,
     'box_gui'			=> false,
     'forwarded_ports' 	=> [[8080,8080], [8443,8443]],
@@ -35,7 +37,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # please see the online documentation at vagrantup.com.
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = v_config['box'] # "ubuntu/trusty64"
+  config.vm.box = v_config['box']
 
 	if Vagrant.has_plugin?("vagrant-cachier")
     	# Configure cached packages to be shared between instances of the same base box.
@@ -76,16 +78,25 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   	#VirtualBox provider:
 	config.vm.provider "virtualbox" do |v|
-		v.name = "opal_vagrant"
+		v.name = v_config['name']
 		v.gui = v_config['box_gui'] #boot headless or not
 	  	v.memory = v_config['vm_memory']
   		v.cpus = v_config['vm_cpus']
 	end
 
-	config.vm.provision "shell" do |s|
-  		s.inline = 'apt-get "$@"'
-  		s.args = ['install', '-y', 'puppet-module-puppetlabs-apt']
-  	end
+    if v_config['distro'] == 'debian'
+        config.vm.provision "shell" do |s|
+            s.inline = 'apt-get "$@"'
+            s.args = ['install', '-y', 'puppet-module-puppetlabs-apt']
+        end
+    end
+
+#    if v_config['distro'] == 'redhat'
+#        config.vm.provision "shell" do |s|
+#            s.inline = 'yum "$@"'
+#            s.args = ['install', '-y', 'puppet-module-puppetlabs-apt']
+#        end
+#    end
 
   # Enable provisioning with Puppet stand alone.  Puppet manifests
   # are contained in a directory path relative to this Vagrantfile.
@@ -94,7 +105,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   #
   config.vm.provision "puppet" do |puppet|
      puppet.manifests_path = "manifests"
-     puppet.manifest_file  = "default.pp"
+     puppet.manifest_file  = "redhat.pp"
   end
 
 end
