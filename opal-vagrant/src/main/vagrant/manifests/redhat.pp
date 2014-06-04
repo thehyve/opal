@@ -6,6 +6,15 @@ package { $packages:
 	ensure => installed,
 }
 
+yumrepo { "opal":
+  baseurl   => "https://repo.thehyve.nl/content/groups/public",
+  descr     => "Opal Repository",
+  enabled   => 1,
+  gpgcheck  => 0
+} -> package { 'opal-server':
+  ensure    => latest,
+}
+
 $java_sec = '/usr/lib/jvm/jre-1.7.0/lib/security/java.security'
 
 Exec {
@@ -19,8 +28,3 @@ exec { 'disable-nss':
 } #~> Service['opal']
 
 
-file { "/etc/yum.repos.d/opal.repo":
-  source  => "/vagrant/files/opal.repo",
-} -> package { 'opal-server':
-  ensure => latest,
-}

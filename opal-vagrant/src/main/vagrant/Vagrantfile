@@ -24,7 +24,6 @@ def parse_vagrant_config(
   config
 end
 
-
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
 
@@ -91,12 +90,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         end
     end
 
-#    if v_config['distro'] == 'redhat'
-#        config.vm.provision "shell" do |s|
-#            s.inline = 'yum "$@"'
-#            s.args = ['install', '-y', 'puppet-module-puppetlabs-apt']
-#        end
-#    end
+    if v_config['distro'] == 'redhat'
+        config.vm.provision "shell" do |s|
+            s.inline = 'yum "$@"'
+            s.args = ['install', '-y', 'puppet-module-puppetlabs-apt']
+        end
+    end
 
   # Enable provisioning with Puppet stand alone.  Puppet manifests
   # are contained in a directory path relative to this Vagrantfile.
@@ -105,7 +104,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   #
   config.vm.provision "puppet" do |puppet|
      puppet.manifests_path = "manifests"
-     puppet.manifest_file  = "redhat.pp"
+     puppet.manifest_file  = "#{v_config['distro']}.pp"
   end
 
 end
