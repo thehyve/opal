@@ -83,18 +83,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   		v.cpus = v_config['vm_cpus']
 	end
 
-    if v_config['distro'] == 'debian'
-        config.vm.provision "shell" do |s|
-            s.inline = 'apt-get "$@"'
-            s.args = ['install', '-y', 'puppet-module-puppetlabs-apt']
-        end
-    end
-
     if v_config['distro'] == 'redhat'
         config.vm.provision "shell" do |s|
             s.inline = 'yum "$@"'
-            s.args = ['install', '-y', 'puppet-module-puppetlabs-apt']
+            s.args = ['install', '-y', 'puppet']
         end
+    end
+
+    config.vm.provision "shell" do |s|
+        s.inline = 'puppet "$@"'
+        s.args = ['module', 'install', 'puppetlabs-firewall']
     end
 
   # Enable provisioning with Puppet stand alone.  Puppet manifests

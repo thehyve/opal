@@ -15,6 +15,12 @@ yumrepo { "opal":
   ensure    => latest,
 }
 
+firewall { "900 accept opal ports":
+  proto     => "tcp",
+  port      => [8080, 8443],
+  action    => "accept",
+}
+
 $java_sec = '/usr/lib/jvm/jre-1.7.0/lib/security/java.security'
 
 Exec {
