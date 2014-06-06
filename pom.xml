@@ -42,7 +42,6 @@
     <module>opal-datashield</module>
     <module>opal-search</module>
     <module>opal-upgrade</module>
-    <module>opal-tools</module>
     <module>opal-vagrant</module>
   </modules>
 
@@ -154,17 +153,6 @@
         <artifactId>opal-upgrade</artifactId>
         <version>${project.version}</version>
       </dependency>
-      <dependency>
-        <groupId>org.obiba.opal.tools</groupId>
-        <artifactId>password-hasher</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.obiba.opal.tools</groupId>
-        <artifactId>password-hasher</artifactId>
-        <version>${project.version}</version>
-        <classifier>cli</classifier>
-      </dependency>
 
       <!-- Obiba dependencies -->
       <dependency>
@@ -191,6 +179,17 @@
         <groupId>org.obiba.commons</groupId>
         <artifactId>obiba-git</artifactId>
         <version>${obiba-commons.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.obiba.commons</groupId>
+        <artifactId>obiba-password-hasher</artifactId>
+        <version>${obiba-commons.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.obiba.commons</groupId>
+        <artifactId>obiba-password-hasher</artifactId>
+        <version>${obiba-commons.version}</version>
+        <classifier>cli</classifier>
       </dependency>
 
       <!-- Magma dependencies -->
@@ -1654,27 +1653,25 @@
     </pluginRepository>
   </pluginRepositories>
 
-  <distributionManagement>
+    <distributionManagement>
+        <repository>
+            <id>repo.thehyve.nl-releases</id>
+            <url>http://repo.thehyve.nl/content/repositories/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>repo.thehyve.nl-snapshots</id>
+            <url>http://repo.thehyve.nl/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 
-    <repository>
-      <id>obiba-releases</id>
-      <url>http://repo.obiba.org/libs-release-local</url>
-    </repository>
+    <scm>
+        <connection>scm:git:git://github.com/thehyve/opal.git</connection>
+        <developerConnection>scm:git:https://github.com/thehyve/opal.git</developerConnection>
+        <url>https://github.com/thehyve/opal</url>
+        <tag>master</tag>
+    </scm>
 
-    <snapshotRepository>
-      <id>obiba-snapshots</id>
-      <url>http://repo.obiba.org/libs-snapshot-local</url>
-    </snapshotRepository>
-
-  </distributionManagement>
-
-  <scm>
-    <connection>scm:git:git://github.com/obiba/opal.git</connection>
-    <developerConnection>scm:git:https://github.com/obiba/opal.git</developerConnection>
-    <url>https://github.com/obiba/opal</url>
-    <tag>opal-2.2.x</tag>
-  </scm>
-
+    <!--
   <issueManagement>
     <system>JIRA</system>
     <url>http://jira.obiba.org</url>
@@ -1684,7 +1681,7 @@
     <system>Jenkins</system>
     <url>http://ci.obiba.org/view/Opal/job/Opal</url>
   </ciManagement>
-
+    -->
   <mailingLists>
     <mailingList>
       <name>OBiBa Users</name>
@@ -1694,7 +1691,7 @@
   </mailingLists>
 
   <properties>
-    <opal.deploy.dir>unstable</opal.deploy.dir>
+    <opal.deploy.dir>opal-unstable</opal.deploy.dir>
 
     <maven.compiler.target>1.7</maven.compiler.target>
     <maven.compiler.source>1.7</maven.compiler.source>
