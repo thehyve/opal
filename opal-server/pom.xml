@@ -10,6 +10,13 @@
   <artifactId>opal-server</artifactId>
   <name>opal-server</name>
 
+    <properties>
+        <install.dir>/usr/share</install.dir>
+        <opal.dir>${install.dir}/opal-server-${project.version}</opal.dir>
+        <package.name>opal-server-${project.version}</package.name>
+        <dist.location>${basedir}/target/${package.name}-dist/${package.name}</dist.location>
+    </properties>
+
   <dependencies>
     <dependency>
       <groupId>commons-daemon</groupId>
@@ -121,59 +128,33 @@
 
   </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <descriptors>
-                        <descriptor>src/main/assembly/opal-server.xml</descriptor>
-                    </descriptors>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/main/assembly/opal-server.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 
-    <profiles>
+  <profiles>
       <profile>
         <id>rpm-build</id>
         <build>
             <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-dependency-plugin</artifactId>
-                    <version>2.8</version>
-                    <executions>
-                        <execution>
-                            <id>unpack-war</id>
-                            <phase>prepare-package</phase>
-                            <goals>
-                                <goal>unpack</goal>
-                            </goals>
-                            <configuration>
-                                <artifactItems>
-                                    <artifactItem>
-                                        <groupId>org.obiba.opal</groupId>
-                                        <artifactId>opal-gwt-client</artifactId>
-                                        <type>war</type>
-                                        <overWrite>true</overWrite>
-                                        <outputDirectory>${war.expanded}</outputDirectory>
-                                    </artifactItem>
-                                </artifactItems>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-
               <plugin>
                   <groupId>org.codehaus.mojo</groupId>
                   <artifactId>rpm-maven-plugin</artifactId>
@@ -205,7 +186,7 @@
                               <groupname>root</groupname>
                               <sources>
                                   <source>
-                                      <location>src/main/bin</location>
+                                      <location>${dist.location}/bin</location>
                                       <excludes>
                                           <exclude>*.bat</exclude>
                                       </excludes>
@@ -219,7 +200,7 @@
                               <groupname>root</groupname>
                               <sources>
                                   <source>
-                                      <location>src/main/tools</location>
+                                      <location>${dist.location}/tools</location>
                                       <excludes>
                                           <exclude>*.bat</exclude>
                                       </excludes>
@@ -234,7 +215,7 @@
                               <configuration>true</configuration>
                               <sources>
                                   <source>
-                                      <location>src/main/conf</location>
+                                      <location>${dist.location}/conf</location>
                                   </source>
                               </sources>
                           </mapping>
@@ -265,7 +246,6 @@
                                   </source>
                               </sources>
                           </mapping>
-
                           <mapping>
                               <directory>${opal.dir}/lib</directory>
                               <filemode>440</filemode>
@@ -273,46 +253,31 @@
                               <groupname>root</groupname>
                               <sources>
                                   <source>
-                                      <location>${project.build.directory}/${project.artifactId}-${project.version}.jar</location>
+                                      <location>${dist.location}/lib</location>
                                   </source>
                               </sources>
-                              <dependency>
-                                  <excludes>
-                                      <exclude>org.obiba.opal:opal-gwt-client:*</exclude>
-                                      <!--
-                                      not possible to filtering these here, so we have to do it in a different way
-                                      <exclude>org.obiba.opal:opal-reporting:zip:dist</exclude>
-                                      <exclude>org.obiba.opal.tools:password-hasher:jar:cli</exclude>
-                                      -->
-                                      <exclude>org.apache.shiro.tools:shiro-tools-hasher:*</exclude>
-                                  </excludes>
-                              </dependency>
                           </mapping>
-
                           <mapping>
                               <directory>${opal.dir}/tools/lib</directory>
                               <filemode>440</filemode>
                               <username>root</username>
                               <groupname>root</groupname>
-                              <dependency>
-                                  <includes>
-                                      <include>org.apache.shiro.tools:shiro-tools-hasher:*</include>
-                                      <include>org.obiba.opal.tools:password-hasher:jar:cli</include>
-                                  </includes>
-                              </dependency>
+                              <sources>
+                                  <source>
+                                      <location>${dist.location}/tools/lib</location>
+                                  </source>
+                              </sources>
                           </mapping>
-
                           <mapping>
                               <directory>${opal.dir}/webapp</directory>
                               <username>root</username>
                               <groupname>root</groupname>
                               <sources>
                                   <source>
-                                      <location>${war.expanded}</location>
+                                      <location>${dist.location}/webapp</location>
                                   </source>
                               </sources>
                           </mapping>
-
                           <mapping>
                               <directory>/usr/share/doc/opal</directory>
                               <filemode>755</filemode>
@@ -328,21 +293,18 @@
                                   </source>
                               </sources>
                           </mapping>
-
                           <mapping>
                               <directory>/var/lib/opal</directory>
                               <filemode>740</filemode>
                               <username>opal</username>
                               <groupname>adm</groupname>
                           </mapping>
-
                           <mapping>
                               <directory>/var/log/opal</directory>
                               <filemode>740</filemode>
                               <username>opal</username>
                               <groupname>adm</groupname>
                           </mapping>
-
                           <mapping>
                               <directory>/tmp/opal</directory>
                               <filemode>740</filemode>
@@ -363,106 +325,80 @@
                               ln -s /etc/opal /var/lib/opal/conf
                           </script>
                       </postinstallScriptlet>
-                      <preremoveScriptlet>
-                          <script>
-                              # only removes symlinks if uninstalling (NOT WORKING YET)
-                              #if [ "$1" = "0" ]; then
-                              #  rm -f ${install.dir}/opal
-                              #  rm -f /var/lib/opal/conf
-                              #fi
-                          </script>
-                      </preremoveScriptlet>
                   </configuration>
               </plugin>
             </plugins>
         </build>
       </profile>
-        
-        <profile>
-            <!-- A profile for the builds performed by the continuous integration server -->
-            <id>ci-build</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>make-deb</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <property name="deb.dir" value="${basedir}/target/deb"/>
-                                        <property name="deb.version" value="${project.version}-b${buildNumber}"/>
-                                        <tstamp>
-                                            <!-- http://www.debian.org/doc/debian-policy/ch-source.html -->
-                                            <format property="deb.date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en"/>
-                                        </tstamp>
+    <profile>
+      <id>deb-build</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>make-deb</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <property name="deb.dir" value="${basedir}/target/deb" />
+                    <property name="deb.version" value="${project.version}-b${buildNumber}" />
+                    <tstamp>
+                      <!-- http://www.debian.org/doc/debian-policy/ch-source.html -->
+                      <format property="deb.date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en" />
+                    </tstamp>
 
-                                        <mkdir dir="${deb.dir}"/>
-                                        <copy todir="${deb.dir}">
-                                            <fileset dir="src/main/deb"/>
-                                            <filterset>
-                                                <filter token="project.version" value="${deb.version}"/>
-                                                <filter token="date" value="${deb.date}"/>
-                                                <filter token="newrelic_version" value="${newrelic.version}"/>
-                                            </filterset>
-                                        </copy>
+                    <mkdir dir="${deb.dir}" />
+                    <copy todir="${deb.dir}">
+                      <fileset dir="src/main/deb" />
+                      <filterset>
+                        <filter token="project.version" value="${deb.version}" />
+                        <filter token="date" value="${deb.date}" />
+                        <filter token="newrelic_version" value="${newrelic.version}" />
+                      </filterset>
+                    </copy>
 
-                                        <mkdir dir="${deb.dir}/usr/share"/>
-                                        <unzip src="${basedir}/target/opal-server-${project.version}-dist.zip" dest="${deb.dir}/usr/share"/>
+                    <mkdir dir="${deb.dir}/usr/share" />
+                    <unzip src="${basedir}/target/opal-server-${project.version}-dist.zip" dest="${deb.dir}/usr/share" />
 
-                                        <mkdir dir="${deb.dir}/etc"/>
-                                        <move todir="${deb.dir}/etc/opal">
-                                            <fileset dir="${deb.dir}/usr/share/opal-server-${project.version}/conf"/>
-                                        </move>
+                    <mkdir dir="${deb.dir}/etc" />
+                    <move todir="${deb.dir}/etc/opal">
+                      <fileset dir="${deb.dir}/usr/share/opal-server-${project.version}/conf" />
+                    </move>
 
-                                        <exec executable="debuild" dir="${deb.dir}" failonerror="true" osfamily="unix">
-                                            <arg value="-b"/>
-                                            <!-- Uncomment following options to package locally  -->
-                                            <!--<arg value="-i" />-->
-                                            <!--<arg value="-us" />-->
-                                            <!--<arg value="-uc" />-->
-                                        </exec>
-                                    </target>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>deploy-deb</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <property name="deb.version" value="${project.version}-b${buildNumber}"/>
-                                        <!-- Deploy deb file in deb repo -->
-                                        <copy todir="${obiba.deb.dir}/${opal.deploy.dir}" file="target/opal_${deb.version}_all.deb"/>
-                                    </target>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>deploy-package</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <!-- Deploy Opal package file in download repo -->
-                                        <copy todir="${obiba.download.dir}/opal/${opal.deploy.dir}"
-                                              file="target/opal-server-${project.version}-dist.zip"/>
-                                    </target>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-
-        </profile>
-    </profiles>
+                    <exec executable="debuild" dir="${deb.dir}" failonerror="true" osfamily="unix">
+                      <arg value="-b" />
+                      <!-- Uncomment following options to package locally  -->
+                      <arg value="-i" />
+                      <arg value="-us" />
+                      <arg value="-uc" />
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>deploy-deb</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <property name="deb.version" value="${project.version}-b${buildNumber}" />
+                    <!-- Deploy deb file in deb repo -->
+                    <copy todir="${obiba.deb.dir}/${opal.deploy.dir}" file="target/opal_${deb.version}_all.deb" />
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
