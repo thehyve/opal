@@ -98,24 +98,19 @@ Opal is now installed, along with OpenJDK and the TCP ports 8080 and 8443 are op
 
 # Opal Post-Install Configuration
 
-Before start using Opal, we need to create the necessary databases.
-We need at least an identifiers database and data databases.
-The easiest is to create the databases in the local running instance of MySQL, but probably for production,
-using external MySQL instances will be better from a data warehousing/replication point of view.
-
-Its also possible to install and use MongoDB in the VM (you have to do it yourselves),
-or use an external MySQL or MongoDB (you have to configure the ports for that).
-Its possible to create several databases (even use a combination of MySQL and MongoDB), depending on the needs and uses.
-
-Remember that most of these tweaks can be accomplished just by modifying the Vagrantfile, and do a vagrant reload.
-
 The very fist time you login in Opal, you will be presented with the 'Post-Install Configuration' screen.
-Here you should register to the datasources created before.
+Here you should register the datasources to be used in Opal.
 There are 2 major types of datasources (identifiers and data), and you should register at least one of each.
+So we need at least the identifiers database and one data database.
 
-## Installing MySQL and setting 2 databases for Opal (using Puppet)
+You can use MySQL, MongoDB, or a combination of both.
+These can point to a dedicated database server, or just use the local databases.
 
-We have a puppet file to make it easy to install and setup MySQL for Opal
+
+## Locally install MySQL and setting 2 databases for Opal (optional)
+
+All the work here is done by Puppet.
+We have a Puppet file to make it easy to install and setup MySQL for Opal
 
 execute
 
@@ -127,6 +122,18 @@ Then create a user with a password, or modify root's password by executing
     mysqladmin -u root password <password>
 
 You will end up with a MySQL installed, with databases opal_ids and opal_data.
+
+## Locally install MongoDB and creating 2 databases for Opal (optional)
+
+We also have a Puppet file to make it easy to install MongoDB for Opal.
+This will install MongoDB, and create 2 dbs 'opal_ids' and 'opal_data'.
+Unfortunately the users have to be setup manually, so you need to create the users for these databases
+so Opal can use them.
+
+execute
+
+    puppet module install puppetlabs-mongodb
+    sudo puppet apply /vagrant/manifests/mongo_redhat.pp
 
 ---
 
