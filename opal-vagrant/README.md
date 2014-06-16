@@ -1,4 +1,4 @@
-# Opal Vagrant
+# Virtualized Opal using Vagrant
 
 This module provides a Vagrant/Puppet setup for hosting Opal.
 The current Vagrant/Puppet setup and Opal packaging is targeting a .rpm based Linux distribution (RedHat or CentOS).
@@ -59,7 +59,44 @@ And to boot it up again, run
 Please refer to Vagrant documentation for more information at
     http://docs.vagrantup.com/v2/getting-started/index.html
 
-## Opal Post-Install Configuration
+---
+
+# Provisioning using Puppet
+
+Its possible to completely bypass the use of vagrant, and use the Puppet manifests to automate all the installation steps.
+This is useful for anybody not interested in having Opal in a VM, but instead have their own RedHat or CentOS box.
+
+1. Install puppet standalone (assuming a RHEL 6 based OS) by running
+
+    sudo rpm -ivh http://yum.puppetlabs.com/puppetlabs-release-el-6.noarch.rpm
+    sudo yum install puppet
+
+2. Install puppet firewall module
+
+    sudo puppet module install puppetlabs-firewall
+
+3. Download the latest Opal Vagrant bundle from
+
+    [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
+
+4. Unpack the opal-vagrant-xxxxx-vagrant.zip
+
+    unzip opal-vagrant-xxxxx-vagrant.zip
+
+5. Move the base folder extracted from the zip as /vagrant
+
+    sudo mv opal-vagrant-1.1-SNAPSHOT /vagrant
+
+6. You should have now a folder /vagrant/manifests with the puppet files. run
+
+    sudo puppet apply /vagrant/manifests/redhat.pp
+
+
+Opal is now installed, along with OpenJDK and the TCP ports 8080 and 8443 are open
+
+---
+
+# Opal Post-Install Configuration
 
 Before start using Opal, we need to create the necessary databases.
 We need at least an identifiers database and data databases.
@@ -76,7 +113,7 @@ The very fist time you login in Opal, you will be presented with the 'Post-Insta
 Here you should register to the datasources created before.
 There are 2 major types of datasources (identifiers and data), and you should register at least one of each.
 
-## Installing MySQL and setting 2 databases for Opal
+## Installing MySQL and setting 2 databases for Opal (using Puppet)
 
 We have a puppet file to make it easy to install and setup MySQL for Opal
 
