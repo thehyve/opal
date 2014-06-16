@@ -128,6 +128,10 @@ Then create a user with a password, or modify root's password by executing
 
 You will end up with a MySQL installed, with databases opal_ids and opal_data.
 
+---
+
+# Service control and updates
+
 ## Opal service commands
 Opal is registered as a service, so we can run in the guest VM commands like
 
