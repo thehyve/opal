@@ -27,12 +27,13 @@ Please refer to section 'Guest VM customization' for concrete examples<br>
 ## Guest VM customization
 
 Examples of what you can modify in the config.yaml:
-* the box (guest VM image) to use. The current setup requires it to be a recent RPM based Linux (RedHat or CentOS)
-* if you want box automatic update (better leave the defaults)
-* guest VM to run in headless mode or not
-* aspects of the 'hardware', like number of CPUs, memory, etc..
-* ports forwarded from host to guest VM
-* synchronized folders (existing in the host machine and mounted in the guest VM)
+
+ * the box (guest VM image) to use. The current setup requires it to be a recent RPM based Linux (RedHat or CentOS)
+ * if you want box automatic update (better leave the defaults)
+ * guest VM to run in headless mode or not
+ * aspects of the 'hardware', like number of CPUs, memory, etc..
+ * ports forwarded from host to guest VM
+ * synchronized folders (existing in the host machine and mounted in the guest VM)
 
 ## After booting the VM
 
@@ -75,9 +76,7 @@ This is useful for anybody not interested in having Opal in a VM, but instead ha
 
     sudo puppet module install puppetlabs-firewall
 
-3 - Download the latest Opal Vagrant bundle from
-
-    [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
+3 - Download the latest Opal Vagrant bundle from [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
 
 4 - Unpack the opal-vagrant-xxxxx-vagrant.zip
 
