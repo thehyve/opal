@@ -66,28 +66,28 @@ Please refer to Vagrant documentation for more information at
 Its possible to completely bypass the use of vagrant, and use the Puppet manifests to automate all the installation steps.
 This is useful for anybody not interested in having Opal in a VM, but instead have their own RedHat or CentOS box.
 
-1. Install puppet standalone (assuming a RHEL 6 based OS) by running
+1 - Install puppet standalone (assuming a RHEL 6 based OS) by running
 
     sudo rpm -ivh http://yum.puppetlabs.com/puppetlabs-release-el-6.noarch.rpm
     sudo yum install puppet
 
-2. Install puppet firewall module
+2 - Install puppet firewall module
 
     sudo puppet module install puppetlabs-firewall
 
-3. Download the latest Opal Vagrant bundle from
+3 - Download the latest Opal Vagrant bundle from
 
     [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
 
-4. Unpack the opal-vagrant-xxxxx-vagrant.zip
+4 - Unpack the opal-vagrant-xxxxx-vagrant.zip
 
     unzip opal-vagrant-xxxxx-vagrant.zip
 
-5. Move the base folder extracted from the zip as /vagrant
+5 - Move the base folder extracted from the zip as /vagrant
 
     sudo mv opal-vagrant-1.1-SNAPSHOT /vagrant
 
-6. You should have now a folder /vagrant/manifests with the puppet files. run
+6 - You should have now a folder /vagrant/manifests with the puppet files. run
 
     sudo puppet apply /vagrant/manifests/redhat.pp
 
