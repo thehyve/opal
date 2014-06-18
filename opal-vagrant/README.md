@@ -131,7 +131,7 @@ so Opal can use them.
 
 execute
 
-    puppet module install puppetlabs-mongodb
+    sudo puppet module install puppetlabs-mongodb
     sudo puppet apply /vagrant/manifests/mongo_redhat.pp
 
 ---
