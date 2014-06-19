@@ -3,14 +3,7 @@ $mysql_pkg = 'mysql-community-server'
 package { 'mysql-community-release':
   ensure    => present,
   provider  => rpm,
-  source    => '/vagrant/files/mysql-community-release-el6-5.noarch.rpm',
-
-} -> yumrepo { "mysql56-community":
-  enabled   => 0,
-
-} -> yumrepo { "mysql55-community":
-  enabled   => 1,
-
+  source    => 'http://dev.mysql.com/get/mysql-community-release-el6-5.noarch.rpm',
 } -> package { $mysql_pkg:
   ensure    => installed,
 }

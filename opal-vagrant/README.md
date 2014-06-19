@@ -78,17 +78,14 @@ This is useful for anybody not interested in having Opal in a VM, but instead ha
 
 3 - Download the latest Opal Vagrant bundle from [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
 
-4 - Unpack the opal-vagrant-xxxxx-vagrant.zip
+4 - Unpack the opal-vagrant-xxxxx-vagrant.zip, and go to the base folder inside the extracted folder
 
     unzip opal-vagrant-xxxxx-vagrant.zip
+    cd <folder>/opal-vagrant-1.1-SNAPSHOT
 
-5 - Move the base folder extracted from the zip as /vagrant
+5 - You should have now be in a folder with a subfolder manifests with the puppet files. run
 
-    sudo mv opal-vagrant-1.1-SNAPSHOT /vagrant
-
-6 - You should have now a folder /vagrant/manifests with the puppet files. run
-
-    sudo puppet apply /vagrant/manifests/redhat.pp
+    sudo puppet apply manifests/redhat.pp
 
 
 Opal is now installed, along with OpenJDK and the TCP ports 8080 and 8443 are open
@@ -122,16 +119,16 @@ Then create a user with a password, or modify root's password by executing
 
 You will end up with a MySQL installed, with databases opal_ids and opal_data.
 
-## Locally install MongoDB and creating 2 databases for Opal (optional)
+## Locally install MongoDB (optional)
 
 We also have a Puppet file to make it easy to install MongoDB for Opal.
-This will install MongoDB, and create 2 dbs 'opal_ids' and 'opal_data'.
-Unfortunately the users have to be setup manually, so you need to create the users for these databases
-so Opal can use them.
+This will only install and launch MongoDB.
+
+Unfortunately the Puppet MongoDB module is not stable/rich enough to provide a way to automate the creation of databases and users.
+So you need to create manually the MongoDB databases and the respective users.
 
 execute
 
-    sudo puppet module install puppetlabs-mongodb
     sudo puppet apply /vagrant/manifests/mongo_redhat.pp
 
 ---

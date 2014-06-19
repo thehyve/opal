@@ -1,5 +1,4 @@
 
-/*
 yumrepo { "mongodb":
   baseurl   => "http://downloads-distro.mongodb.org/repo/redhat/os/x86_64/",
   descr     => "MongoDB Repository",
@@ -7,10 +6,11 @@ yumrepo { "mongodb":
   gpgcheck  => 0
 } -> package { 'mongodb-org':
   ensure    => latest,
-} -> service { 'mongod':
+}
+-> service { 'mongod':
   ensure  => running,
 }
-*/
+/*
 
 class {'::mongodb::globals':
   manage_package_repo => true,
@@ -26,6 +26,7 @@ mongodb_database { opal_ids:
 mongodb_database { opal_data:
   ensure        => present,
 }
+*/
 
 /*
 mongodb_user { 'opal_ids':
