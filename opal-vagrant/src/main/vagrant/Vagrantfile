@@ -83,12 +83,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   		v.cpus = v_config['vm_cpus']
 	end
 
-    if v_config['distro'] == 'redhat'
-        config.vm.provision "shell" do |s|
-            s.inline = 'yum "$@"'
-            s.args = ['install', '-y', 'puppet']
-        end
-    end
+    #if v_config['distro'] == 'redhat'
+    #    config.vm.provision "shell" do |s|
+    #        s.inline = 'yum "$@"'
+    #        s.args = ['install', '-y', 'puppet']
+    #    end
+    #end
 
     config.vm.provision "shell" do |s|
         s.inline = 'puppet "$@"'

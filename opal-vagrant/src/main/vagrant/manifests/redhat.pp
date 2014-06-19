@@ -7,7 +7,8 @@ package { $packages:
 }
 
 yumrepo { "opal":
-  baseurl   => "https://repo.thehyve.nl/content/groups/public",
+  #baseurl   => "https://repo.thehyve.nl/content/groups/public",
+  baseurl   => "https://repo.thehyve.nl/content/repositories/snapshots",
   descr     => "Opal Repository",
   enabled   => 1,
   gpgcheck  => 0
