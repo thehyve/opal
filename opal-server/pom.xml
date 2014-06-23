@@ -158,7 +158,6 @@
               <plugin>
                   <groupId>org.codehaus.mojo</groupId>
                   <artifactId>rpm-maven-plugin</artifactId>
-                  <version>2.1-alpha-4</version>
                   <executions>
                       <execution>
                           <id>generate-rpm</id>
@@ -190,6 +189,9 @@
                                       <excludes>
                                           <exclude>*.bat</exclude>
                                       </excludes>
+                                  </source>
+                                  <source>
+                                      <location>src/main/rpm/update.sh</location>
                                   </source>
                               </sources>
                           </mapping>
