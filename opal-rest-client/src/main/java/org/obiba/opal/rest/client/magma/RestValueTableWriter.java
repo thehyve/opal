@@ -107,6 +107,16 @@ class RestValueTableWriter implements ValueTableWriter {
       }
 
       @Override
+      public void remove() {
+        URI valueSetUri = restValueTable.newReference("valueSet", entity.getIdentifier());
+        try {
+          checkResponse(restValueTable.getOpalClient().delete(valueSetUri));
+        } catch(IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
       public void writeValue(@NotNull Variable variable, Value value) {
         valueSetsDtoBuilder.addVariables(variable.getName());
         valueSetDtoBuilder.addValues(Dtos.asDto(value));
