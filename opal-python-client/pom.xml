@@ -174,6 +174,98 @@
         </plugins>
       </build>
     </profile>
+
+      <profile>
+          <id>rpm-build</id>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>org.codehaus.mojo</groupId>
+                      <artifactId>rpm-maven-plugin</artifactId>
+                      <executions>
+                          <execution>
+                              <id>generate-rpm</id>
+                              <goals>
+                                  <goal>attached-rpm</goal>
+                              </goals>
+                          </execution>
+                      </executions>
+                      <configuration>
+                          <group>Applications/Engineering</group>
+                          <packager>The Hyve</packager>
+                          <changelogFile>/usr/share/doc/opal-python-client/changelog</changelogFile>
+                          <targetOS>Linux</targetOS>
+                          <requires>
+                              <require>python</require>
+                              <require>python-pycurl</require>
+                              <require>python-protobuf</require>
+                          </requires>
+
+                          <mappings>
+
+                              <mapping>
+                                  <directory>/usr/bin</directory>
+                                  <filemode>755</filemode>
+                                  <username>root</username>
+                                  <groupname>root</groupname>
+                                  <sources>
+                                      <source>
+                                          <location>${basedir}/target/opal-python/bin/scripts</location>
+                                          <includes>
+                                              <include>opal</include>
+                                          </includes>
+                                      </source>
+                                  </sources>
+                              </mapping>
+
+                              <mapping>
+                                  <directory>/usr/share/pyshared/opal</directory>
+                                  <filemode>755</filemode>
+                                  <username>root</username>
+                                  <groupname>root</groupname>
+                                  <sources>
+                                      <source>
+                                          <location>${basedir}/target/opal-python/bin/opal</location>
+                                          <includes>
+                                              <include>**/*</include>
+                                          </includes>
+                                      </source>
+                                  </sources>
+                              </mapping>
+
+                              <mapping>
+                                  <directory>/usr/share/doc/opal-python-client</directory>
+                                  <filemode>744</filemode>
+                                  <username>root</username>
+                                  <groupname>root</groupname>
+                                  <documentation>true</documentation>
+                                  <sources>
+                                      <source>
+                                          <location>dist/debian/changelog</location>
+                                      </source>
+                                      <source>
+                                          <location>dist/rpm/copyright</location>
+                                      </source>
+                                  </sources>
+                              </mapping>
+                          </mappings>
+                          <postinstallScriptlet>
+                              <script>
+                                  set -e
+                                  # link opal folder to default python lib, /usr/share/pyshared may not be icluded in the lib path
+                                  python_lib=$(python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
+                                  if [ -d $python_lib ]; then
+                                      rm -f $python_lib/opal
+                                  fi
+                                  ln -s /usr/share/pyshared/opal $python_lib/opal
+                              </script>
+                          </postinstallScriptlet>
+
+                        </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+      </profile>
   </profiles>
 
 </project>
