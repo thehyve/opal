@@ -125,7 +125,9 @@ class OpalClient:
             return cls()
 
         def isSsl(self):
-            if self.data.viewkeys() & {'cert', 'key'}:
+            #only python 2.7
+            #if self.data.viewkeys() & set(['cert', 'key']):
+            if 'cert' in self.data or 'key' in self.data:
                 return True
             return False
 
