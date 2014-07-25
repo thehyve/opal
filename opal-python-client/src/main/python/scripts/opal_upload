@@ -1,0 +1,144 @@
+#!/usr/bin/python
+
+#import shutil
+#import shlex
+from ConfigParser import ConfigParser
+from os.path import expanduser
+from os import listdir
+from os.path import isfile, join
+
+parser = ConfigParser()
+parser.read(expanduser('~/.opal/fileupload.conf'))
+config = dict(parser.items('main'))
+
+source_folder = config['src_folder']
+file_type = config['file_type']
+extension = '.' + file_type
+move_file = config['move_file']
+
+class ImportFile:
+    #timestamp = ''
+
+    @staticmethod
+    def parse(filename):
+        # TODO: parse the attributes from filename
+        # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.<ext>
+        # example: 20140503140523_mdsantwerp_lifelines_upd.csv
+        result = ImportFile()
+        result.filename = filename
+        result.timestamp = ''
+        result.project = ''
+        result.table = 'tbl'
+        result.operation = ''
+        result.path = join(source_folder, filename)
+        return result
+
+def error(msg):
+    log('ERROR', msg)
+    return
+
+def info(msg):
+    log('INFO', msg)
+    return
+
+def log(type, msg):
+    # TODO: write in logfile
+    print type + ': ' + msg
+    return
+
+def get_command(creds, specific):
+    list = ['opal'] + creds + specific
+    return ' '.join(list)
+
+def get_upload_params(path):
+    list = []
+    list.append('-up')
+    list.append(path)
+    list.append(config['opal_folder'])
+    return list
+
+def get_import_params(file):
+    return
+
+def get_credentials():
+    list = []
+    list.append('-o')
+    list.append(config['url'])
+
+    if config['certificate']:
+        # TODO: check if these are the correct params
+        list.append('-sc')
+        list.append(config['ssl_cert'])
+        list.append('-sk')
+        list.append(config['ssl_key'])
+    else:
+        list.append('-u')
+        list.append(config['user'])
+        list.append('-p')
+        list.append(config['password'])
+
+    return list
+
+# processes one ImportFile
+def process_file(file):
+    code = 0
+
+    creds = get_credentials()
+    upload_cmd = get_command(creds, get_upload_params(file.path))
+    #opal file -o <url> -u administrator -p password -up sample.csv /data_import
+    #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
+
+    # TODO execute upload command
+    print upload_cmd
+
+    # TODO import file (and poll for job completion if asynchronous)
+    # TODO index table (if possible)
+
+    return code
+
+# returns a list of ImportFile, ordered by date (oldest first)
+def get_files():
+    list = []
+    for f in listdir(source_folder):
+        fullname = join(source_folder, f)
+        if isfile(fullname) and f.endswith(extension):
+            list.append(ImportFile.parse(f))
+
+    # TODO: sort files by name
+
+    return list
+
+files = get_files()
+
+# main loop on ImportFiles
+for file in files:
+    info('processing ' + file.filename)
+    code = process_file(file)
+    if (code == 0):
+        # TODO move or delete file (depending on file_move flag)
+        info('finished ' + file.filename)
+    else:
+        # TODO how to better describe the error? do we have exceptions in Python?
+        error('some error: ' + code)
+        break
+
+
+# SAMPLE fileupload.conf:
+
+# [main]
+# url = http://localhost:8080
+#
+# certificate =
+#
+# user = administrator
+# password = password
+#
+# #ssl_key =
+# #ssl_cert =
+#
+# file_type = csv
+# move_file = true
+# opal_folder = /data_import
+# src_folder = /Users/carlos/tmp/opal/input
+# target_folder = /Users/carlos/tmp/opal/done
+# log = /var/log/opal/fileupload.log
