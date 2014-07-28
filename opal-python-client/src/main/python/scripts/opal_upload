@@ -28,9 +28,10 @@ class ImportFile:
         result.filename = filename
         result.timestamp = ''
         result.project = ''
-        result.table = 'tbl'
+        result.table = ''
         result.operation = ''
         result.path = join(source_folder, filename)
+        result.entity_type = 'participant' # TODO: temporary. this should be present in the filename
         return result
 
 def error(msg):
@@ -46,8 +47,8 @@ def log(type, msg):
     print type + ': ' + msg
     return
 
-def get_command(creds, specific):
-    list = ['opal'] + creds + specific
+def get_command(cmd, creds, specific):
+    list = ['opal', cmd] + creds + specific
     return ' '.join(list)
 
 def get_upload_params(path):
@@ -58,7 +59,19 @@ def get_upload_params(path):
     return list
 
 def get_import_params(file):
-    return
+    list = []
+    # TODO build opal import command params
+    # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i -pa <opalfs_file_path> -ty <entity_type> -t <table>
+    list.append('-d')
+    list.append(file.project)
+    list.append('-i')
+    list.append('-pa')
+    list.append(config['opal_folder'] + '/' + file.filename)
+    list.append('-ty')
+    list.append(file.entity_type)
+    list.append('-t')
+    list.append(file.table)
+    return list
 
 def get_credentials():
     list = []
@@ -84,14 +97,17 @@ def process_file(file):
     code = 0
 
     creds = get_credentials()
-    upload_cmd = get_command(creds, get_upload_params(file.path))
+    upload_cmd = get_command('file', creds, get_upload_params(file.path))
     #opal file -o <url> -u administrator -p password -up sample.csv /data_import
     #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
 
     # TODO execute upload command
     print upload_cmd
 
-    # TODO import file (and poll for job completion if asynchronous)
+    import_cmd = get_command('import-csv', creds, get_import_params(file))
+    # TODO execure import command (and poll for job completion if asynchronous)
+    print import_cmd
+
     # TODO index table (if possible)
 
     return code
