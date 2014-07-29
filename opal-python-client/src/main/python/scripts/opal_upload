@@ -31,6 +31,10 @@ logging.basicConfig(filename=logfile, level=logging.DEBUG)
 # add a log handler to emit some messages to stderr
 stderrhandler = logging.StreamHandler()
 stderrhandler.setLevel(logging.INFO)
+if '-v' in sys.argv:
+    stderrhandler.setLevel(logging.DEBUG)
+if '-q' in sys.argv:
+    stderrhandler.setLevel(logging.WARN)
 logging.getLogger().addHandler(stderrhandler)
 
 
@@ -137,6 +141,7 @@ def main():
         logging.info('done')
     except Exception as e:
         logging.exception(e)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
