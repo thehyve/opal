@@ -1,0 +1,126 @@
+#!/usr/bin/python
+
+import sys
+import re
+import logging
+import subprocess
+from ConfigParser import ConfigParser
+import shutil
+from os import path, listdir
+from os.path import expanduser, isfile
+
+config = ConfigParser()
+config.read(expanduser('~/.opal/fileupload.conf'))
+
+url = config.get('main', 'url')
+file_type = config.get('main', 'file_type')
+move_file = config.getboolean('main', 'move_file')
+src_folder = expanduser(config.get('main', 'src_folder'))
+done_folder = expanduser(config.get('main', 'done_folder'))
+opal_folder = config.get('main', 'opal_folder')
+logfile = expanduser(config.get('main', 'logfile'))
+
+if config.getboolean('main', 'use_certificate'):
+    auth_params = ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
+else:
+    auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+
+logging.basicConfig(filename=logfile, level=logging.DEBUG)
+
+
+class ImportFile:
+    def __init__(self, filename):
+        self.name = filename
+        # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.<ext>
+        # example: 20140503140523_mdsantwerp_lifelines_upd.csv
+        match = re.match(r'(\d+)_(\w+)_(\w+)_(\w+)\.(\w+)', filename)
+        if not match:
+            raise Exception('File name does not match expected format: '
+                            '<timestamp>_<project_name>_<table_name>_<operation>.<ext>')
+        self.timestamp, self.project, self.table, self.operation = match.groups()[0:4]
+        self.path = path.join(src_folder, filename)
+        self.entity_type = 'Participant' # TODO: temporary. this should be present in the filename
+
+    # processes one ImportFile
+    def process(self):
+        logging.info('processing '+self.name)
+
+        self.upload()
+        self.import_()
+        self.reindex()
+        if move_file:
+            self.move_away()
+
+        logging.info('finished processing ' + self.name)
+
+    def upload(self):
+        #opal file -o <url> -u administrator -p password -up sample.csv /data_import
+        #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
+        upload_cmd = ['opal', 'file'] + auth_params + ['-up', self.path, opal_folder]
+        run_command(upload_cmd)
+        
+    def import_(self):
+        # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
+        #      -pa <opalfs_self_path> -ty <entity_type> -t <table>
+        import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', 
+                      '-pa', opal_folder+'/'+self.name, '-ty', self.entity_type, '-t', self.table]
+        run_command(import_cmd)
+
+    def reindex(self):
+        logging.info('rebuilding index')
+        reindex_cmd = ['opal', 'rest'] + auth_params + [
+            '-v', '/datasource/{0}/table/{1}/index'.format(self.project, self.table), '-m', 'PUT']
+        run_command(reindex_cmd)
+
+    def move_away(self):
+        logging.info('moving {0} to {1}'.format(self.path, done_folder))
+        shutil.move(self.path, done_folder)
+
+
+if hasattr(subprocess, 'call_output'):
+    call_output = subprocess.call_output
+else:
+    # Support python 2.6, which doesn't have subprocess.call_output
+    def call_output(cmd, **args):
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1024*16, **args)
+        output = ''.join(proc.stdout)
+        proc.wait()
+        return output
+
+
+def run_command(cmd):
+    logging.debug('executing ' + ' '.join(cmd))
+    try:
+        out = call_output(cmd, stderr=subprocess.STDOUT)
+        logging.debug(out)
+    except subprocess.CalledProcessError as e:
+        logging.debug(e.output)
+        logging.error('subcommand exited with return code {0}: {1}'.format(e.returncode, ' '.join(e.cmd)))
+        raise
+
+
+# returns a list of ImportFile, ordered by date (oldest first)
+def get_files():
+    list = []
+    for f in listdir(src_folder):
+        fullname = path.join(src_folder, f)
+        if isfile(fullname) and f.endswith('.'+file_type):
+            list.append(ImportFile(f))
+
+    list.sort(key=lambda f: f.name)
+    return list
+
+
+def main():
+    # try:
+        files = get_files()
+        for file in files:
+            file.process()
+        logging.info('done')
+    # except Exception as e:
+    #     import pdb; pdb.set_trace()
+    #     exc_type, exc_obj, exc_tb = sys.exc_info()
+    #     logging.error("{0} on line {1}: {2}".format(exc_type.__name__, exc_tb.tb_lineno, e))
+
+if __name__ == '__main__':
+    main()
