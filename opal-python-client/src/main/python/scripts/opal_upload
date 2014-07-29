@@ -25,7 +25,13 @@ if config.getboolean('main', 'use_certificate'):
 else:
     auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
 
+
+# standard logging to the logfile
 logging.basicConfig(filename=logfile, level=logging.DEBUG)
+# add a log handler to emit some messages to stderr
+stderrhandler = logging.StreamHandler()
+stderrhandler.setLevel(logging.INFO)
+logging.getLogger().addHandler(stderrhandler)
 
 
 class ImportFile:
@@ -67,7 +73,7 @@ class ImportFile:
         run_command(import_cmd)
 
     def reindex(self):
-        logging.info('rebuilding index')
+        logging.info('rebuilding index for project {0}, table {1}'.format(self.project, self.table))
         reindex_cmd = ['opal', 'rest'] + auth_params + [
             '-v', '/datasource/{0}/table/{1}/index'.format(self.project, self.table), '-m', 'PUT']
         run_command(reindex_cmd)
@@ -81,10 +87,20 @@ if hasattr(subprocess, 'call_output'):
     call_output = subprocess.call_output
 else:
     # Support python 2.6, which doesn't have subprocess.call_output
-    def call_output(cmd, **args):
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1024*16, **args)
-        output = ''.join(proc.stdout)
-        proc.wait()
+    # Based on 2.7 library
+    def call_output(*popenargs, **kwargs):
+        try:
+            process = subprocess.Popen(*popenargs, stdout=subprocess.PIPE, **kwargs)
+            output = process.stdout.read()
+        except:
+            process.kill()
+            process.wait()
+            raise
+        retcode = process.wait()
+        if retcode != 0:
+            err = subprocess.CalledProcessError(retcode, popenargs[0])
+            err.output = output
+            raise err
         return output
 
 
@@ -112,15 +128,15 @@ def get_files():
 
 
 def main():
-    # try:
+    try:
         files = get_files()
+        if not files:
+            logging.warn('Source directory is empty, nothing to do')
         for file in files:
             file.process()
         logging.info('done')
-    # except Exception as e:
-    #     import pdb; pdb.set_trace()
-    #     exc_type, exc_obj, exc_tb = sys.exc_info()
-    #     logging.error("{0} on line {1}: {2}".format(exc_type.__name__, exc_tb.tb_lineno, e))
+    except Exception as e:
+        logging.exception(e)
 
 if __name__ == '__main__':
     main()
