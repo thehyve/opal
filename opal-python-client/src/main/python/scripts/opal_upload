@@ -1,160 +1,126 @@
 #!/usr/bin/python
 
-#import shutil
-#import shlex
+import sys
+import re
+import logging
+import subprocess
 from ConfigParser import ConfigParser
-from os.path import expanduser
-from os import listdir
-from os.path import isfile, join
+import shutil
+from os import path, listdir
+from os.path import expanduser, isfile
 
-parser = ConfigParser()
-parser.read(expanduser('~/.opal/fileupload.conf'))
-config = dict(parser.items('main'))
+config = ConfigParser()
+config.read(expanduser('~/.opal/fileupload.conf'))
 
-source_folder = config['src_folder']
-file_type = config['file_type']
-extension = '.' + file_type
-move_file = config['move_file']
+url = config.get('main', 'url')
+file_type = config.get('main', 'file_type')
+move_file = config.getboolean('main', 'move_file')
+src_folder = expanduser(config.get('main', 'src_folder'))
+done_folder = expanduser(config.get('main', 'done_folder'))
+opal_folder = config.get('main', 'opal_folder')
+logfile = expanduser(config.get('main', 'logfile'))
+
+if config.getboolean('main', 'use_certificate'):
+    auth_params = ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
+else:
+    auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+
+logging.basicConfig(filename=logfile, level=logging.DEBUG)
+
 
 class ImportFile:
-    #timestamp = ''
-
-    @staticmethod
-    def parse(filename):
-        # TODO: parse the attributes from filename
+    def __init__(self, filename):
+        self.name = filename
         # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.<ext>
         # example: 20140503140523_mdsantwerp_lifelines_upd.csv
-        result = ImportFile()
-        result.filename = filename
-        result.timestamp = ''
-        result.project = ''
-        result.table = ''
-        result.operation = ''
-        result.path = join(source_folder, filename)
-        result.entity_type = 'participant' # TODO: temporary. this should be present in the filename
-        return result
+        match = re.match(r'(\d+)_(\w+)_(\w+)_(\w+)\.(\w+)', filename)
+        if not match:
+            raise Exception('File name does not match expected format: '
+                            '<timestamp>_<project_name>_<table_name>_<operation>.<ext>')
+        self.timestamp, self.project, self.table, self.operation = match.groups()[0:4]
+        self.path = path.join(src_folder, filename)
+        self.entity_type = 'Participant' # TODO: temporary. this should be present in the filename
 
-def error(msg):
-    log('ERROR', msg)
-    return
+    # processes one ImportFile
+    def process(self):
+        logging.info('processing '+self.name)
 
-def info(msg):
-    log('INFO', msg)
-    return
+        self.upload()
+        self.import_()
+        self.reindex()
+        if move_file:
+            self.move_away()
 
-def log(type, msg):
-    # TODO: write in logfile
-    print type + ': ' + msg
-    return
+        logging.info('finished processing ' + self.name)
 
-def get_command(cmd, creds, specific):
-    list = ['opal', cmd] + creds + specific
-    return ' '.join(list)
+    def upload(self):
+        #opal file -o <url> -u administrator -p password -up sample.csv /data_import
+        #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
+        upload_cmd = ['opal', 'file'] + auth_params + ['-up', self.path, opal_folder]
+        run_command(upload_cmd)
+        
+    def import_(self):
+        # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
+        #      -pa <opalfs_self_path> -ty <entity_type> -t <table>
+        import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', 
+                      '-pa', opal_folder+'/'+self.name, '-ty', self.entity_type, '-t', self.table]
+        run_command(import_cmd)
 
-def get_upload_params(path):
-    list = []
-    list.append('-up')
-    list.append(path)
-    list.append(config['opal_folder'])
-    return list
+    def reindex(self):
+        logging.info('rebuilding index')
+        reindex_cmd = ['opal', 'rest'] + auth_params + [
+            '-v', '/datasource/{0}/table/{1}/index'.format(self.project, self.table), '-m', 'PUT']
+        run_command(reindex_cmd)
 
-def get_import_params(file):
-    list = []
-    # TODO build opal import command params
-    # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i -pa <opalfs_file_path> -ty <entity_type> -t <table>
-    list.append('-d')
-    list.append(file.project)
-    list.append('-i')
-    list.append('-pa')
-    list.append(config['opal_folder'] + '/' + file.filename)
-    list.append('-ty')
-    list.append(file.entity_type)
-    list.append('-t')
-    list.append(file.table)
-    return list
+    def move_away(self):
+        logging.info('moving {0} to {1}'.format(self.path, done_folder))
+        shutil.move(self.path, done_folder)
 
-def get_credentials():
-    list = []
-    list.append('-o')
-    list.append(config['url'])
 
-    if config['certificate']:
-        # TODO: check if these are the correct params
-        list.append('-sc')
-        list.append(config['ssl_cert'])
-        list.append('-sk')
-        list.append(config['ssl_key'])
-    else:
-        list.append('-u')
-        list.append(config['user'])
-        list.append('-p')
-        list.append(config['password'])
+if hasattr(subprocess, 'call_output'):
+    call_output = subprocess.call_output
+else:
+    # Support python 2.6, which doesn't have subprocess.call_output
+    def call_output(cmd, **args):
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1024*16, **args)
+        output = ''.join(proc.stdout)
+        proc.wait()
+        return output
 
-    return list
 
-# processes one ImportFile
-def process_file(file):
-    code = 0
+def run_command(cmd):
+    logging.debug('executing ' + ' '.join(cmd))
+    try:
+        out = call_output(cmd, stderr=subprocess.STDOUT)
+        logging.debug(out)
+    except subprocess.CalledProcessError as e:
+        logging.debug(e.output)
+        logging.error('subcommand exited with return code {0}: {1}'.format(e.returncode, ' '.join(e.cmd)))
+        raise
 
-    creds = get_credentials()
-    upload_cmd = get_command('file', creds, get_upload_params(file.path))
-    #opal file -o <url> -u administrator -p password -up sample.csv /data_import
-    #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
-
-    # TODO execute upload command
-    print upload_cmd
-
-    import_cmd = get_command('import-csv', creds, get_import_params(file))
-    # TODO execure import command (and poll for job completion if asynchronous)
-    print import_cmd
-
-    # TODO index table (if possible)
-
-    return code
 
 # returns a list of ImportFile, ordered by date (oldest first)
 def get_files():
     list = []
-    for f in listdir(source_folder):
-        fullname = join(source_folder, f)
-        if isfile(fullname) and f.endswith(extension):
-            list.append(ImportFile.parse(f))
+    for f in listdir(src_folder):
+        fullname = path.join(src_folder, f)
+        if isfile(fullname) and f.endswith('.'+file_type):
+            list.append(ImportFile(f))
 
-    # TODO: sort files by name
-
+    list.sort(key=lambda f: f.name)
     return list
 
-files = get_files()
 
-# main loop on ImportFiles
-for file in files:
-    info('processing ' + file.filename)
-    code = process_file(file)
-    if (code == 0):
-        # TODO move or delete file (depending on file_move flag)
-        info('finished ' + file.filename)
-    else:
-        # TODO how to better describe the error? do we have exceptions in Python?
-        error('some error: ' + code)
-        break
+def main():
+    # try:
+        files = get_files()
+        for file in files:
+            file.process()
+        logging.info('done')
+    # except Exception as e:
+    #     import pdb; pdb.set_trace()
+    #     exc_type, exc_obj, exc_tb = sys.exc_info()
+    #     logging.error("{0} on line {1}: {2}".format(exc_type.__name__, exc_tb.tb_lineno, e))
 
-
-# SAMPLE fileupload.conf:
-
-# [main]
-# url = http://localhost:8080
-#
-# certificate =
-#
-# user = administrator
-# password = password
-#
-# #ssl_key =
-# #ssl_cert =
-#
-# file_type = csv
-# move_file = true
-# opal_folder = /data_import
-# src_folder = /Users/carlos/tmp/opal/input
-# target_folder = /Users/carlos/tmp/opal/done
-# log = /var/log/opal/fileupload.log
+if __name__ == '__main__':
+    main()
