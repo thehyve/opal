@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys
+import sys, os
 import re
 import logging
 import subprocess
@@ -111,6 +111,13 @@ class ImportFile:
         run_command(reindex_cmd)
 
     def move_away(self):
+        try:
+            destpath = path.join(done_folder, self.name)
+            if path.exists(destpath):
+                logging.warn('Destination {0} exists, attempting to overwrite'.format(destpath))
+                os.remove(destpath)
+        except OSError as e:
+            logging.debug(e, exc_info=True)
         logging.info('moving {0} to {1}'.format(self.path, done_folder))
         shutil.move(self.path, done_folder)
 
