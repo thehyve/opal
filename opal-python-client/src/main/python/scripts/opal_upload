@@ -50,7 +50,7 @@ def u(it):
 class ImportFile:
     def __init__(self, filename):
         self.name = filename
-        # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.<ext>
+        # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.csv
         # example: 20140503140523_mdsantwerp_lifelines_upd.csv
         match = re.match(r'(\d+)_([^_]+)_([^_]+)(.*)\.csv', filename)
         if not match:
@@ -59,7 +59,6 @@ class ImportFile:
         self.timestamp, self.project, self.table = match.groups()[0:3]
         self.path = path.join(src_folder, filename)
         self.entity_type = self.get_entity_type()
-        #self.entity_type = 'Participant' # TODO: temporary. this should be present in the filename
 
     # processes one ImportFile
     def process(self):
@@ -94,16 +93,16 @@ class ImportFile:
         job_id = result['id']
         status = result['status']
         if status == 'IN_PROGRESS':
-            sys.stderr.write('Waiting for import to finish')
+            if not quiet: sys.stderr.write('Waiting for import to finish')
             while status == 'IN_PROGRESS':
-                sys.stderr.write('.')
+                if not quiet: sys.stderr.write('.')
                 time.sleep(1)
                 result = json.loads(run_command(['opal', 'rest'] + auth_params + [
                                                  '-v', '/project/{0}/command/{1}'.format(u(self.project), u(job_id))]))
                 status = result['status']
                 if status == 'FAILED':
                     raise Exception('Import job failed: {0}'.format(self.name))
-            sys.stderr.write('\n')
+            if not quiet: sys.stderr.write('\n')
 
     def reindex(self):
         logging.info('rebuilding index for project {0}, table {1}'.format(self.project, self.table))
@@ -159,7 +158,7 @@ def main():
         logging.error(e)
         if not verbose:
             print >>sys.stderr, "Run '{0} -v' for more information".format(sys.argv[0])
-        logging.debug(e, exc_info=sys.exc_info())
+        logging.debug(e, exc_info=True)
         sys.exit(1)
 
 if __name__ == '__main__':
