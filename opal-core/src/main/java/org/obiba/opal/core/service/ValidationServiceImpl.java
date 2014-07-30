@@ -1,6 +1,5 @@
 package org.obiba.opal.core.service;
 
-import com.google.common.collect.LinkedListMultimap;
 import org.obiba.magma.*;
 import org.obiba.opal.core.service.validation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,10 +9,7 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.io.IOException;
-import java.net.URL;
 import java.util.*;
-import java.util.concurrent.RunnableFuture;
 
 /**
  * Created by carlos on 7/28/14.
@@ -46,34 +42,6 @@ public class ValidationServiceImpl implements ValidationService {
     }
 
 
-    private void copyAttributes(Variable source, Variable target) {
-
-        List<Attribute> list = new ArrayList<>();
-        List<Attribute> attrs = source.getAttributes();
-        for (Attribute attr: attrs) {
-            Attribute.Builder builder = Attribute.Builder.newAttribute();
-            builder.withName(attr.getName());
-            builder.withNamespace(attr.getNamespace());
-            builder.withValue(attr.getValue());
-            builder.withValue(Locale.ENGLISH, attr.getValue().toString());
-            //builder.withLocale(attr.getLocale());
-            list.add(builder.build());
-            //target.getAttributes().add(builder.build());
-        }
-
-        if (list.size() > 0) {
-            LinkedListMultimap mm = LinkedListMultimap.create();
-            for (Attribute a: list) {
-                mm.put(a.getName(), a);
-            }
-            try {
-                target.getClass().getField("attributes").set(target, mm);
-            } catch (Exception ex) {
-                ex.printStackTrace(System.out);
-            }
-        }
-    }
-
     private void validate(final Datasource ds, final ValueTable valueTable,
                           final ValidationListener listener) {
 
@@ -83,7 +51,7 @@ public class ValidationServiceImpl implements ValidationService {
 
         for (Variable var: vt.getVariables()) {
             List<DataValidator> validators = validatorFactory.getValidators(var, listener);
-            copyAttributes(var, valueTable.getVariable(var.getName()));
+            //copyAttributes(var, valueTable.getVariable(var.getName()));
             if (validators != null && validators.size() > 0) {
                 validatorMap.put(var.getName(), validators);
             }
