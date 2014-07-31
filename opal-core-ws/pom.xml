@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <artifactId>opal</artifactId>
-    <groupId>org.obiba.opal</groupId>
+    <groupId>org.obiba.opal.sesi</groupId>
     <version>2.3-SNAPSHOT</version>
   </parent>
   <artifactId>opal-core-ws</artifactId>
@@ -16,32 +16,32 @@
       <artifactId>obiba-shiro-web</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-core-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-fs</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-rest-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-ws</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-web-model</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-search</artifactId>
     </dependency>
     <dependency>

@@ -3,7 +3,7 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.obiba.opal</groupId>
+  <groupId>org.obiba.opal.sesi</groupId>
   <artifactId>opal</artifactId>
   <packaging>pom</packaging>
   <version>2.3-SNAPSHOT</version>
@@ -50,47 +50,47 @@
 
       <!-- Opal dependencies -->
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-core-api</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-core</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-core-ws</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-sshd</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-shell</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-server</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-fs</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-reporting</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-reporting</artifactId>
         <version>${project.version}</version>
         <classifier>dist</classifier>
@@ -98,58 +98,58 @@
         <type>zip</type>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-r</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-httpd</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-ws</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-web-model</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-gwt-client</artifactId>
         <version>${project.version}</version>
         <type>war</type>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-rest-client</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-python-client</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-php-client</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-datashield</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-search</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-upgrade</artifactId>
         <version>${project.version}</version>
       </dependency>
