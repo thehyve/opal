@@ -1637,6 +1637,28 @@
 
   <repositories>
 
+      <repository>
+          <id>thehyve.releases</id>
+          <name>The Hyve Releases</name>
+          <url>https://repo.thehyve.nl/content/repositories/releases</url>
+          <releases>
+              <enabled>true</enabled>
+          </releases>
+          <snapshots>
+              <enabled>false</enabled>
+          </snapshots>
+      </repository>
+      <repository>
+          <id>thehyve.snapshots</id>
+          <name>The Hyve Snapshots</name>
+          <url>https://repo.thehyve.nl/content/repositories/snapshots</url>
+          <releases>
+              <enabled>false</enabled>
+          </releases>
+          <snapshots>
+              <enabled>true</enabled>
+          </snapshots>
+      </repository>
     <repository>
       <id>obiba.org</id>
       <name>Obiba Maven 2.x Repository</name>
@@ -1650,14 +1672,14 @@
     </repository>
 
   </repositories>
-
+<!--
   <pluginRepositories>
     <pluginRepository>
       <id>obiba</id>
       <url>http://repo.obiba.org/repo</url>
     </pluginRepository>
   </pluginRepositories>
-
+-->
     <distributionManagement>
         <repository>
             <id>repo.thehyve.nl-releases</id>
@@ -1766,7 +1788,7 @@
     <mongodb-driver.version>2.11.4</mongodb-driver.version>
     <mysql-connector-java.version>5.1.29</mysql-connector-java.version>
     <newrelic.version>3.4.2</newrelic.version>
-    <obiba-commons.version>1.7-SNAPSHOT</obiba-commons.version>
+    <obiba-commons.version>1.7-sesi</obiba-commons.version>
     <opal-oda.version>1.2.3</opal-oda.version>
     <opencsv.version>2.3</opencsv.version>
     <orientdb.version>1.6.4</orientdb.version>
