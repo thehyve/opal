@@ -1522,12 +1522,10 @@
           <artifactId>maven-release-plugin</artifactId>
           <version>${maven-release-plugin.version}</version>
           <configuration>
-            <!-- Use parent version as modules' version -->
             <autoVersionSubmodules>true</autoVersionSubmodules>
-            <releaseProfiles>ci-build,release</releaseProfiles>
-            <!-- Comment this profile because Jenkins crashes while performing the release -->
-            <!--<preparationGoals>clean verify install</preparationGoals>-->
-          </configuration>
+            <releaseProfiles>rpm-build</releaseProfiles>
+            <goals>install package</goals>
+          </configuration>        
         </plugin>
 
         <plugin>
