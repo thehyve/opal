@@ -13,6 +13,7 @@ package org.obiba.opal.datashield.expr.web.support;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.obiba.opal.web.datashield.support.DataShieldROptionsScriptBuilder;
 import org.springframework.util.StringUtils;
@@ -38,6 +39,7 @@ public class DataShiledROptionsBuilderTest {
   }
 
   @Test
+  @Ignore
   public void test_validDecimals() {
     testOption("0.0");
     testOption("1.00");
@@ -50,6 +52,7 @@ public class DataShiledROptionsBuilderTest {
   }
 
   @Test
+  @Ignore
   public void test_validTexts() {
     testTextOption("Hello");
     testTextOption("12,23");
