@@ -12,7 +12,7 @@
 -->
   <packaging>pom</packaging>
   <groupId>org.obiba.opal.sesi</groupId>
-  <version>1.1-SNAPSHOT</version>
+  <version>2.3</version>
 
   <artifactId>opal-vagrant</artifactId>
   <name>opal-vagrant</name>
