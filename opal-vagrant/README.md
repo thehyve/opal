@@ -75,7 +75,8 @@ This is useful for anybody not interested in having Opal in a VM, but instead ha
 
     sudo puppet module install puppetlabs-firewall
 
-3 - Download the latest Opal Vagrant bundle from [Latest Opal Vagrant zip release](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=releases&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br> [Latest Opal Vagrant zip snapshot (for developers)](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
+3 - Download the latest Opal Vagrant bundle from 
+[Latest Opal Vagrant zip release](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=releases&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br> [Latest Opal Vagrant zip snapshot (for developers)](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
 
 4 - Unpack the opal-vagrant-xxxxx-vagrant.zip, and go to the base folder inside the extracted folder
 
