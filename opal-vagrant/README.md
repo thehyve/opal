@@ -78,7 +78,7 @@ This is useful for anybody not interested in having Opal in a VM, but instead ha
 4 - Unpack the opal-vagrant-xxxxx-vagrant.zip, and go to the base folder inside the extracted folder
 
     unzip opal-vagrant-xxxxx-vagrant.zip
-    cd <folder>/opal-vagrant-1.1-SNAPSHOT
+    cd <folder>/opal-vagrant-x.y
 
 5 - You should have now be in a folder with a subfolder manifests with the puppet files. run
 
