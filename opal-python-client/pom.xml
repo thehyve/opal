@@ -213,7 +213,7 @@
                                       <source>
                                           <location>${basedir}/target/opal-python/bin/scripts</location>
                                           <includes>
-                                              <include>opal</include>
+                                              <include>*</include>
                                           </includes>
                                       </source>
                                   </sources>
@@ -243,6 +243,7 @@
                                   <sources>
                                       <source>
                                           <location>dist/debian/changelog</location>
+                                          <location>dist/debian/fileupload.conf.sample</location>
                                       </source>
                                       <source>
                                           <location>dist/rpm/copyright</location>
