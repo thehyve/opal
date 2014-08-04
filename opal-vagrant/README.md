@@ -10,7 +10,8 @@ The current Vagrant/Puppet setup and Opal packaging is targeting a .rpm based Li
     http://www.vagrantup.com/downloads
 2. Download the latest Opal Vagrant bundle from
 
-    [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
+    [Latest Opal Vagrant zip release](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=releases&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br> [Latest Opal Vagrant zip snapshot (for developers)](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
+    
 This is a very small file that only contains descriptors on how to prepare the guest VM and required dependencies and system settings<br>
 3. Unzip this file to a folder in the host machine (where you want your Vagrant image to be located).<br>
 The Vagrantfile defines some important VM settings, but most of them can be overriden locally.<br>
@@ -76,7 +77,7 @@ This is useful for anybody not interested in having Opal in a VM, but instead ha
 
     sudo puppet module install puppetlabs-firewall
 
-3 - Download the latest Opal Vagrant bundle from [Latest Opal Vagrant zip](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
+3 - Download the latest Opal Vagrant bundle from [Latest Opal Vagrant zip release](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=releases&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br> [Latest Opal Vagrant zip snapshot (for developers)](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
 
 4 - Unpack the opal-vagrant-xxxxx-vagrant.zip, and go to the base folder inside the extracted folder
 
