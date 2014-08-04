@@ -10,9 +10,7 @@ The current Vagrant/Puppet setup and Opal packaging is targeting a .rpm based Li
     http://www.vagrantup.com/downloads
 2. Download the latest Opal Vagrant bundle from
 
-    [Latest Opal Vagrant zip release](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=releases&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br> [Latest Opal Vagrant zip snapshot (for developers)](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br>
-    
-This is a very small file that only contains descriptors on how to prepare the guest VM and required dependencies and system settings<br>
+    [Latest Opal Vagrant zip release](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=releases&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br> [Latest Opal Vagrant zip snapshot (for developers)](http://repo.thehyve.nl/service/local/artifact/maven/redirect?r=snapshots&g=org.obiba.opal.sesi&a=opal-vagrant&e=zip&v=LATEST&c=vagrant)<br> This is a very small file that only contains descriptors on how to prepare the guest VM and required dependencies and system settings<br>
 3. Unzip this file to a folder in the host machine (where you want your Vagrant image to be located).<br>
 The Vagrantfile defines some important VM settings, but most of them can be overriden locally.<br>
 All overridable settings are described in the file 'config.yaml.sample', along with the defaults.<br>
