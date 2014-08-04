@@ -123,7 +123,7 @@
                     <mkdir dir="${deb.dir}/usr/share/pyshared" />
                     <mkdir dir="${deb.dir}/usr/bin" />
                     <move todir="${deb.dir}/usr/bin">
-                      <fileset dir="${target.dir}/opal-python/bin/scripts" includes="opal" />
+                      <fileset dir="${target.dir}/opal-python/bin/scripts" includes="*" />
                     </move>
                     <move todir="${deb.dir}/usr/share/pyshared/opal">
                       <fileset dir="${target.dir}/opal-python/bin/opal" includes="**/*" />
