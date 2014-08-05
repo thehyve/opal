@@ -3,7 +3,7 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.obiba.opal</groupId>
+  <groupId>org.obiba.opal.sesi</groupId>
   <artifactId>opal</artifactId>
   <packaging>pom</packaging>
   <version>2.3-SNAPSHOT</version>
@@ -50,47 +50,47 @@
 
       <!-- Opal dependencies -->
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-core-api</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-core</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-core-ws</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-sshd</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-shell</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-server</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-fs</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-reporting</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-reporting</artifactId>
         <version>${project.version}</version>
         <classifier>dist</classifier>
@@ -98,58 +98,58 @@
         <type>zip</type>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-r</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-httpd</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-ws</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-web-model</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-gwt-client</artifactId>
         <version>${project.version}</version>
         <type>war</type>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-rest-client</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-python-client</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-php-client</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-datashield</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-search</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.obiba.opal</groupId>
+        <groupId>org.obiba.opal.sesi</groupId>
         <artifactId>opal-upgrade</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -1522,12 +1522,10 @@
           <artifactId>maven-release-plugin</artifactId>
           <version>${maven-release-plugin.version}</version>
           <configuration>
-            <!-- Use parent version as modules' version -->
             <autoVersionSubmodules>true</autoVersionSubmodules>
-            <releaseProfiles>ci-build,release</releaseProfiles>
-            <!-- Comment this profile because Jenkins crashes while performing the release -->
-            <!--<preparationGoals>clean verify install</preparationGoals>-->
-          </configuration>
+            <releaseProfiles>rpm-build</releaseProfiles>
+            <goals>install package</goals>
+          </configuration>        
         </plugin>
 
         <plugin>
@@ -1637,6 +1635,28 @@
 
   <repositories>
 
+      <repository>
+          <id>thehyve.releases</id>
+          <name>The Hyve Releases</name>
+          <url>https://repo.thehyve.nl/content/repositories/releases</url>
+          <releases>
+              <enabled>true</enabled>
+          </releases>
+          <snapshots>
+              <enabled>false</enabled>
+          </snapshots>
+      </repository>
+      <repository>
+          <id>thehyve.snapshots</id>
+          <name>The Hyve Snapshots</name>
+          <url>https://repo.thehyve.nl/content/repositories/snapshots</url>
+          <releases>
+              <enabled>false</enabled>
+          </releases>
+          <snapshots>
+              <enabled>true</enabled>
+          </snapshots>
+      </repository>
     <repository>
       <id>obiba.org</id>
       <name>Obiba Maven 2.x Repository</name>
@@ -1650,14 +1670,14 @@
     </repository>
 
   </repositories>
-
+<!--
   <pluginRepositories>
     <pluginRepository>
       <id>obiba</id>
       <url>http://repo.obiba.org/repo</url>
     </pluginRepository>
   </pluginRepositories>
-
+-->
     <distributionManagement>
         <repository>
             <id>repo.thehyve.nl-releases</id>
@@ -1757,7 +1777,7 @@
     <liquibase.version>1.9.4</liquibase.version>
     <logback.version>1.1.1</logback.version>
     <logstash-logback.version>2.4</logstash-logback.version>
-    <magma.version>1.11-SNAPSHOT</magma.version>
+    <magma.version>1.11-sesi</magma.version>
     <public-datasources.version>1.2.0</public-datasources.version>
     <mail.version>1.5.0-b01</mail.version>
     <mockftpserver.version>2.4</mockftpserver.version>
@@ -1766,7 +1786,7 @@
     <mongodb-driver.version>2.11.4</mongodb-driver.version>
     <mysql-connector-java.version>5.1.29</mysql-connector-java.version>
     <newrelic.version>3.4.2</newrelic.version>
-    <obiba-commons.version>1.7-SNAPSHOT</obiba-commons.version>
+    <obiba-commons.version>1.7-sesi</obiba-commons.version>
     <opal-oda.version>1.2.3</opal-oda.version>
     <opencsv.version>2.3</opencsv.version>
     <orientdb.version>1.6.4</orientdb.version>

@@ -1,15 +1,19 @@
 #!/usr/bin/python
 
-import sys
+import sys, os
 import re
 import logging
 import subprocess
 import json
 import time
 from ConfigParser import ConfigParser
+from urllib import quote_plus
 import shutil
 from os import path, listdir
 from os.path import expanduser, isfile
+
+verbose = '-v' in sys.argv
+quiet = '-q' in sys.argv
 
 config = ConfigParser()
 config.read(expanduser('~/.opal/fileupload.conf'))
@@ -33,25 +37,28 @@ logging.basicConfig(filename=logfile, level=logging.DEBUG)
 # add a log handler to emit some messages to stderr
 stderrhandler = logging.StreamHandler()
 stderrhandler.setLevel(logging.INFO)
-if '-v' in sys.argv:
+if verbose:
     stderrhandler.setLevel(logging.DEBUG)
-if '-q' in sys.argv:
+if quiet:
     stderrhandler.setLevel(logging.WARN)
 logging.getLogger().addHandler(stderrhandler)
 
 
+def u(it):
+    return quote_plus(str(it))
+
 class ImportFile:
     def __init__(self, filename):
         self.name = filename
-        # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.<ext>
+        # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.csv
         # example: 20140503140523_mdsantwerp_lifelines_upd.csv
-        match = re.match(r'(\d+)_(\w+)_(\w+)_(\w+)\.(\w+)', filename)
+        match = re.match(r'(\d+)_([^_]+)_([^_]+)(.*)\.csv', filename)
         if not match:
             raise Exception('File name does not match expected format: '
-                            '<timestamp>_<project_name>_<table_name>_<operation>.<ext>')
-        self.timestamp, self.project, self.table, self.operation = match.groups()[0:4]
+                            '<timestamp>_<project_name>_<table_name>.csv')
+        self.timestamp, self.project, self.table = match.groups()[0:3]
         self.path = path.join(src_folder, filename)
-        self.entity_type = 'Participant' # TODO: temporary. this should be present in the filename
+        self.entity_type = self.get_entity_type()
 
     # processes one ImportFile
     def process(self):
@@ -64,6 +71,12 @@ class ImportFile:
             self.move_away()
 
         logging.info('finished processing ' + self.name)
+
+    def get_entity_type(self):
+        logging.info('loading entity type for table {0}'.format(self.table))
+        res = json.loads(run_command(['opal', 'rest'] + auth_params + [
+            '-v', '/datasource/{0}/table/{1}'.format(u(self.project), u(self.table))]))
+        return res['entityType']
 
     def upload(self):
         #opal file -o <url> -u administrator -p password -up sample.csv /data_import
@@ -79,22 +92,32 @@ class ImportFile:
         result = json.loads(run_command(import_cmd))
         job_id = result['id']
         status = result['status']
-        while status == 'IN_PROGRESS':
-            logging.info('Waiting for import to finish')
-            time.sleep(1)
-            result = json.loads(run_command(['opal', 'rest'] + auth_params + [
-                                             '-v', '/project/{0}/command/{1}'.format(self.project, job_id)]))
-            status = result['status']
-            if status == 'FAILED':
-                raise Exception('Import job failed: {0}'.format(self.name))
+        if status == 'IN_PROGRESS':
+            if not quiet: sys.stderr.write('Waiting for import to finish')
+            while status == 'IN_PROGRESS':
+                if not quiet: sys.stderr.write('.')
+                time.sleep(1)
+                result = json.loads(run_command(['opal', 'rest'] + auth_params + [
+                                                 '-v', '/project/{0}/command/{1}'.format(u(self.project), u(job_id))]))
+                status = result['status']
+                if status == 'FAILED':
+                    raise Exception('Import job failed: {0}'.format(self.name))
+            if not quiet: sys.stderr.write('\n')
 
     def reindex(self):
         logging.info('rebuilding index for project {0}, table {1}'.format(self.project, self.table))
         reindex_cmd = ['opal', 'rest'] + auth_params + [
-            '-v', '/datasource/{0}/table/{1}/index'.format(self.project, self.table), '-m', 'PUT']
+            '-v', '/datasource/{0}/table/{1}/index'.format(u(self.project), u(self.table)), '-m', 'PUT']
         run_command(reindex_cmd)
 
     def move_away(self):
+        try:
+            destpath = path.join(done_folder, self.name)
+            if path.exists(destpath):
+                logging.warn('Destination {0} exists, attempting to overwrite'.format(destpath))
+                os.remove(destpath)
+        except OSError as e:
+            logging.debug(e, exc_info=True)
         logging.info('moving {0} to {1}'.format(self.path, done_folder))
         shutil.move(self.path, done_folder)
 
@@ -105,7 +128,7 @@ def run_command(cmd):
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = process.communicate()
         retcode = process.wait()
-        logging.debug(out+'\n'+err)
+        logging.debug(err+'\n'+out)
         if retcode != 0:
             logging.error('subcommand exited with return code {0}: {1}'.format(retcode, ' '.join(cmd)))
             err = subprocess.CalledProcessError(retcode, popenargs[0])
@@ -139,7 +162,10 @@ def main():
             file.process()
         logging.info('done')
     except Exception as e:
-        logging.exception(e)
+        logging.error(e)
+        if not verbose:
+            print >>sys.stderr, "Run '{0} -v' for more information".format(sys.argv[0])
+        logging.debug(e, exc_info=True)
         sys.exit(1)
 
 if __name__ == '__main__':

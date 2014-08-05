@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <artifactId>opal</artifactId>
-    <groupId>org.obiba.opal</groupId>
+    <groupId>org.obiba.opal.sesi</groupId>
     <version>2.3-SNAPSHOT</version>
   </parent>
   <artifactId>opal-shell</artifactId>
@@ -20,15 +20,15 @@
       <artifactId>obiba-security</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-core-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-web-model</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.obiba.opal</groupId>
+      <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-reporting</artifactId>
     </dependency>
     <dependency>
