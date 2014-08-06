@@ -10,6 +10,7 @@
 package org.obiba.opal.web.search;
 
 import org.obiba.magma.MagmaEngine;
+import org.obiba.magma.Timestamps;
 import org.obiba.magma.ValueTable;
 import org.obiba.opal.search.IndexManagerConfigurationService;
 import org.obiba.opal.search.IndexSynchronization;
@@ -23,6 +24,8 @@ import org.obiba.opal.web.model.Opal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.ws.rs.core.UriBuilder;
 
 public abstract class IndexResource {
 
@@ -102,5 +105,36 @@ public abstract class IndexResource {
       return Opal.TableIndexationStatus.UPTODATE;
     }
     return Opal.TableIndexationStatus.NOT_INDEXED;
+  }
+
+  protected Opal.TableIndexStatusDto.Builder getTableIndexationDto(String datasource, String table) {
+
+      ValueTable valueTable = getValueTable(datasource, table);
+
+      Opal.TableIndexStatusDto.Builder dtoBuilder = Opal.TableIndexStatusDto.newBuilder() //
+              .setDatasource(datasource) //
+              .setTable(table) //
+              .setSchedule(getScheduleDto(datasource, table)) //
+              .setStatus(getTableIndexationStatus(datasource, table)) //
+              .setLink(UriBuilder.fromPath("/").path(ValueTableIndexResource.class).build(datasource, table).getPath());
+
+      Float progress = getValueTableIndexationProgress(datasource, table);
+      if (progress != null) {
+          dtoBuilder.setProgress(progress);
+      }
+
+      if (!valueTable.getTimestamps().getCreated().isNull()) {
+          dtoBuilder.setTableLastUpdate(valueTable.getTimestamps().getLastUpdate().toString());
+      }
+
+      Timestamps indexTimestamps = valuesIndexManager.getIndex(valueTable).getTimestamps();
+      if (!indexTimestamps.getCreated().isNull()) {
+          dtoBuilder.setIndexCreated(indexTimestamps.getCreated().toString());
+      }
+      if (!indexTimestamps.getLastUpdate().isNull()) {
+          dtoBuilder.setIndexLastUpdate(indexTimestamps.getLastUpdate().toString());
+      }
+
+      return dtoBuilder;
   }
 }
