@@ -18,6 +18,9 @@ from os.path import expanduser, isfile
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
 
+
+## Parse config file ##
+
 config = ConfigParser()
 config.read(expanduser('~/.opal/fileupload.conf'))
 
@@ -36,9 +39,15 @@ else:
     auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
 
 
-# standard logging to the logfile
-logging.basicConfig(filename=logfile, level=logging.DEBUG)
-# add a log handler to emit some messages to stderr
+## Configure logging ##
+
+logging.getLogger().setLevel(logging.DEBUG)
+
+logfilehandler = logging.FileHandler(logfile)
+logfilehandler.setLevel(logging.DEBUG)
+logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
+logging.getLogger().addHandler(logfilehandler)
+
 stderrhandler = logging.StreamHandler()
 stderrhandler.setLevel(logging.INFO)
 if verbose:
