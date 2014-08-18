@@ -93,7 +93,7 @@ public class ValidatorFactory {
     }
 
     Set<String> getVocabularyCodes(URL url, VocabularyImporter importer) throws IOException, GeneralSecurityException {
-        if (url.getProtocol() == "https") {
+        if (url.getProtocol().equals("https")) {
             return getVocabularyCodesHttps(url, importer);
         } else {
             try (InputStream in = url.openStream()) {
