@@ -17,39 +17,33 @@ public class ValidateCommand extends AbstractOpalRuntimeDependentCommand<Validat
 
     @Override
     public int execute() {
-        int errorCode = CommandResultCode.CRITICAL_ERROR;
-        Datasource ds = null;
-        ValueTable valueTable = null;
+        ValueTable valueTable;
 
         String datasource = getOptions().getDatasource();
         if (datasource == null) {
-            getShell().printf("No datasource specified\n");
-        } else {
-            try {
-                ds = MagmaEngine.get().getDatasource(datasource);
-            } catch (NoSuchDatasourceException ex) {
-                getShell().printf("Datasource not found\n");
-            }
+            return err("No datasource specified\n");
         }
 
-        if (ds != null) {
-            String table = getOptions().getTable();
-            if (table == null) {
-                getShell().printf("No table specified\n");
-            }
-
-            try {
-                valueTable = ds.getValueTable(table);
-            } catch (NoSuchValueTableException ex) {
-                getShell().printf("Table not found\n");
-            }
+        String table = getOptions().getTable();
+        if (table == null) {
+            return err("No table specified\n");
         }
 
-        if (valueTable != null) {
-            return executeValidation(valueTable);
-        } else {
-            return errorCode;
+        try {
+            Datasource ds = MagmaEngine.get().getDatasource(datasource);
+            valueTable = ds.getValueTable(table);
+        } catch (NoSuchDatasourceException ex) {
+            return err("Datasource not found\n");
+        } catch (NoSuchValueTableException ex) {
+            return err("Table not found\n");
         }
+
+        return executeValidation(valueTable);
+    }
+
+    private int err(String errmsg) {
+        getShell().printf(errmsg);
+        return CommandResultCode.CRITICAL_ERROR;
     }
 
     private int executeValidation(ValueTable valueTable) {
