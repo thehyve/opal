@@ -3,16 +3,11 @@
 [main]
 url = http://localhost:8080
 
-use_certificate = false
-
 user = administrator
 password = password
 
-#ssl_key =
-#ssl_cert =
-
 file_type = csv
-move_file = true
+done = move
 opal_folder = /data_import
 src_folder = ~/input
 done_folder = ~/done

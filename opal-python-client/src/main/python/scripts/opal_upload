@@ -21,40 +21,54 @@ quiet = '-q' in sys.argv
 
 ## Parse config file ##
 
-config = ConfigParser()
-config.read(expanduser('~/.opal/fileupload.conf'))
+def parse_config():
+    global url, file_type, done, src_folder, done_folder, opal_folder, logfile, auth_params
 
-url = config.get('main', 'url')
-file_type = config.get('main', 'file_type')
-move_file = config.getboolean('main', 'move_file')
-src_folder = expanduser(config.get('main', 'src_folder'))
-done_folder = expanduser(config.get('main', 'done_folder'))
-opal_folder = config.get('main', 'opal_folder')
-logfile = expanduser(config.get('main', 'logfile'))
+    config = ConfigParser()
+    config.read(expanduser('~/.opal/fileupload.conf'))
 
-if config.has_option('main', 'use_certificate') and \
-   config.getboolean('main', 'use_certificate'):
-    auth_params = ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
-else:
-    auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+    url = config.get('main', 'url')
+    file_type = config.get('main', 'file_type')
+    done = config.get('main', 'done')
+    src_folder = expanduser(config.get('main', 'src_folder'))
+    done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
+    opal_folder = config.get('main', 'opal_folder')
+    logfile = expanduser(config.get('main', 'logfile'))
 
+    if config.has_option('main', 'use_certificate') and \
+       config.getboolean('main', 'use_certificate'):
+        auth_params = ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
+    else:
+        auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+
+    if file_type != 'csv':
+        logging.error('file_type = {0}. File types other than "csv" are not currently supported'.format(file_type))
+        sys.exit(1)
+    if done not in ('move', 'delete', 'none'):
+        logging.error('done = {0}, should be one of "move", "delete" or "none"'.format(done))
+        sys.exit(1)
+
+parse_config()
 
 ## Configure logging ##
 
-logging.getLogger().setLevel(logging.DEBUG)
+def configure_logging():
+    logging.getLogger().setLevel(logging.DEBUG)
 
-logfilehandler = logging.FileHandler(logfile)
-logfilehandler.setLevel(logging.DEBUG)
-logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
-logging.getLogger().addHandler(logfilehandler)
+    logfilehandler = logging.FileHandler(logfile)
+    logfilehandler.setLevel(logging.DEBUG)
+    logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
+    logging.getLogger().addHandler(logfilehandler)
 
-stderrhandler = logging.StreamHandler()
-stderrhandler.setLevel(logging.INFO)
-if verbose:
-    stderrhandler.setLevel(logging.DEBUG)
-if quiet:
-    stderrhandler.setLevel(logging.WARN)
-logging.getLogger().addHandler(stderrhandler)
+    stderrhandler = logging.StreamHandler()
+    stderrhandler.setLevel(logging.INFO)
+    if verbose:
+        stderrhandler.setLevel(logging.DEBUG)
+    if quiet:
+        stderrhandler.setLevel(logging.WARN)
+    logging.getLogger().addHandler(stderrhandler)
+
+configure_logging()
 
 
 MAX_URL_SIZE = 2000
@@ -109,8 +123,7 @@ class OpalFile:
 
         getattr(self, self.operation)()
 
-        if move_file:
-            self.move_away()
+        getattr(self, 'done_'+done)()
 
         logging.info('finished processing ' + self.name)
 
@@ -201,7 +214,11 @@ class OpalFile:
         if self.project not in self.reindex_projects:
             self.reindex_projects.append(self.project)
 
-    def move_away(self):
+    def done_delete(self):
+        logging.info('deleting {0}'.format(self.path))
+        os.remove(self.path)
+
+    def done_move(self):
         try:
             destpath = path.join(done_folder, self.name)
             if path.exists(destpath):
@@ -212,6 +229,9 @@ class OpalFile:
         logging.info('moving {0} to {1}'.format(self.path, done_folder))
         shutil.move(self.path, done_folder)
 
+    def done_none(self):
+        pass
+
 
 def run_rest_command(url, method=None):
     m = []
@@ -220,7 +240,7 @@ def run_rest_command(url, method=None):
     return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
 
 def run_command(cmd):
-    logging.debug('executing ' + ' '.join(cmd))
+    logging.debug('executing ' + ' '.join(hide_password(cmd)))
     process = None
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -229,8 +249,9 @@ def run_command(cmd):
         output = err+'\n'+out
         logging.debug(output)
         if retcode != 0:
-            logging.error('subcommand exited with return code {0}: {1}'.format(retcode, ' '.join(cmd)))
-            err = subprocess.CalledProcessError(retcode, cmd)
+            logging.error('subcommand exited with return code {0}: {1}'.format(
+                retcode, ' '.join(hide_password(cmd))))
+            err = subprocess.CalledProcessError(retcode, hide_password(cmd))
             err.output = output
             raise err
         return out
@@ -240,6 +261,13 @@ def run_command(cmd):
                 process.kill()
             process.wait()
         raise
+
+def hide_password(cmd):
+    try:
+        password_idx = cmd.index('-p')
+        return cmd[:password_idx+1] + ['{password_not_logged}'] + cmd[password_idx+2:]
+    except ValueError:
+        return cmd
 
 
 # returns a list of ImportFile, ordered by date (oldest first)
@@ -251,7 +279,7 @@ def get_files():
             if f.endswith('.'+file_type):
                 list.append(OpalFile(f))
             else:
-                logging.warn("Unsupported file type {0}, skipping.".format(f))
+                logging.debug("Skipping file with wrong format {0}".format(f))
 
     list.sort(key=lambda f: f.name)
     return list
