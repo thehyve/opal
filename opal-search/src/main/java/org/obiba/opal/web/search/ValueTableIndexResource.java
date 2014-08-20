@@ -65,33 +65,7 @@ public class ValueTableIndexResource extends IndexResource {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("SearchServiceUnavailable").build();
     }
 
-    ValueTable valueTable = getValueTable(datasource, table);
-
-    Opal.TableIndexStatusDto.Builder dtoBuilder = Opal.TableIndexStatusDto.newBuilder() //
-        .setDatasource(datasource) //
-        .setTable(table) //
-        .setSchedule(getScheduleDto(datasource, table)) //
-        .setStatus(getTableIndexationStatus(datasource, table)) //
-        .setLink(UriBuilder.fromPath("/").path(ValueTableIndexResource.class).build(datasource, table).getPath());
-
-    Float progress = getValueTableIndexationProgress(datasource, table);
-    if(progress != null) {
-      dtoBuilder.setProgress(progress);
-    }
-
-    if(!valueTable.getTimestamps().getCreated().isNull()) {
-      dtoBuilder.setTableLastUpdate(valueTable.getTimestamps().getLastUpdate().toString());
-    }
-
-    Timestamps indexTimestamps = valuesIndexManager.getIndex(valueTable).getTimestamps();
-    if(!indexTimestamps.getCreated().isNull()) {
-      dtoBuilder.setIndexCreated(indexTimestamps.getCreated().toString());
-    }
-    if(!indexTimestamps.getLastUpdate().isNull()) {
-      dtoBuilder.setIndexLastUpdate(indexTimestamps.getLastUpdate().toString());
-    }
-
-    return Response.ok().entity(dtoBuilder.build()).build();
+    return Response.ok().entity(getTableIndexationDto(datasource, table).build()).build();
   }
 
   @PUT

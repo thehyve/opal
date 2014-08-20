@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from __future__ import print_function, division
+
 import sys, os
 import re
 import logging
@@ -7,6 +9,7 @@ import subprocess
 import json
 import time
 from ConfigParser import ConfigParser
+import csv
 from urllib import quote_plus
 import shutil
 from os import path, listdir
@@ -15,76 +18,179 @@ from os.path import expanduser, isfile
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
 
-config = ConfigParser()
-config.read(expanduser('~/.opal/fileupload.conf'))
 
-url = config.get('main', 'url')
-file_type = config.get('main', 'file_type')
-move_file = config.getboolean('main', 'move_file')
-src_folder = expanduser(config.get('main', 'src_folder'))
-done_folder = expanduser(config.get('main', 'done_folder'))
-opal_folder = config.get('main', 'opal_folder')
-logfile = expanduser(config.get('main', 'logfile'))
+## Parse config file ##
 
-if config.getboolean('main', 'use_certificate'):
-    auth_params = ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
-else:
-    auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+def parse_config():
+    global url, file_type, done, src_folder, done_folder, opal_folder, logfile, auth_params
+
+    config = ConfigParser()
+    config.read(expanduser('~/.opal/fileupload.conf'))
+
+    url = config.get('main', 'url')
+    file_type = config.get('main', 'file_type')
+    done = config.get('main', 'done')
+    src_folder = expanduser(config.get('main', 'src_folder'))
+    done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
+    opal_folder = config.get('main', 'opal_folder')
+    logfile = expanduser(config.get('main', 'logfile'))
+
+    if config.has_option('main', 'use_certificate') and \
+       config.getboolean('main', 'use_certificate'):
+        auth_params = ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
+    else:
+        auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+
+    if file_type != 'csv':
+        logging.error('file_type = {0}. File types other than "csv" are not currently supported'.format(file_type))
+        sys.exit(1)
+    if done not in ('move', 'delete', 'none'):
+        logging.error('done = {0}, should be one of "move", "delete" or "none"'.format(done))
+        sys.exit(1)
+
+parse_config()
+
+## Configure logging ##
+
+def configure_logging():
+    logging.getLogger().setLevel(logging.DEBUG)
+
+    logfilehandler = logging.FileHandler(logfile)
+    logfilehandler.setLevel(logging.DEBUG)
+    logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
+    logging.getLogger().addHandler(logfilehandler)
+
+    stderrhandler = logging.StreamHandler()
+    stderrhandler.setLevel(logging.INFO)
+    if verbose:
+        stderrhandler.setLevel(logging.DEBUG)
+    if quiet:
+        stderrhandler.setLevel(logging.WARN)
+    logging.getLogger().addHandler(stderrhandler)
+
+configure_logging()
 
 
-# standard logging to the logfile
-logging.basicConfig(filename=logfile, level=logging.DEBUG)
-# add a log handler to emit some messages to stderr
-stderrhandler = logging.StreamHandler()
-stderrhandler.setLevel(logging.INFO)
-if verbose:
-    stderrhandler.setLevel(logging.DEBUG)
-if quiet:
-    stderrhandler.setLevel(logging.WARN)
-logging.getLogger().addHandler(stderrhandler)
+MAX_URL_SIZE = 2000
 
 
 def u(it):
     return quote_plus(str(it))
 
-class ImportFile:
+
+class OpalFile:
+
+    reindex_projects = []
+    operations = ['upload', 'delete', 'replace']
+
+    @staticmethod
+    def do_reindex(project):
+        logging.info('starting reindex for project {0}'.format(project))
+        run_rest_command('/datasource/{0}/indexes'.format(u(project)), method='PUT')
+
+    # Retain the order in which the files were processed, but only reindex each project once.
+    @classmethod
+    def reindex_all(cls):
+        for p in cls.reindex_projects:
+            try:
+                cls.do_reindex(p)
+            except Exception as e:
+                logging.error('Error while reindexing project {0}: {1}'.format(p, e))
+                logging.debug(e, exc_info=True)
+        del cls.reindex_projects[:]
+
+
     def __init__(self, filename):
         self.name = filename
+        self._entity_type = None
         # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.csv
-        # example: 20140503140523_mdsantwerp_lifelines_upd.csv
-        match = re.match(r'(\d+)_([^_]+)_([^_]+)(.*)\.csv', filename)
-        if not match:
-            raise Exception('File name does not match expected format: '
-                            '<timestamp>_<project_name>_<table_name>.csv')
-        self.timestamp, self.project, self.table = match.groups()[0:3]
+        # example: 20140503140523_mdsantwerp_lifelines_update.csv
+        match = re.match(r'^([^_]+)_([^_]+)_([^_]+)_([^_]+)(.*)\.csv$', filename)
+        if match:
+            self.timestamp, self.project, self.table, self.operation = match.groups()[0:4]
+        if not match or self.operation not in self.operations:
+            raise Exception('File name {0} does not match expected format: '
+                            '<timestamp>_<project_name>_<table_name>_<operation>.csv\n'
+                            'Valid operations: update, delete, replace'.format(filename))
         self.path = path.join(src_folder, filename)
-        self.entity_type = self.get_entity_type()
 
-    # processes one ImportFile
+    # processes this file
     def process(self):
         logging.info('processing '+self.name)
 
-        self.upload()
-        self.import_()
-        self.reindex()
-        if move_file:
-            self.move_away()
+        if not self.operation in self.operations:
+            raise Exception("Operation '{0}' not implemented".format(self.operation))
+
+        getattr(self, self.operation)()
+
+        getattr(self, 'done_'+done)()
 
         logging.info('finished processing ' + self.name)
 
-    def get_entity_type(self):
-        logging.info('loading entity type for table {0}'.format(self.table))
-        res = json.loads(run_command(['opal', 'rest'] + auth_params + [
-            '-v', '/datasource/{0}/table/{1}'.format(u(self.project), u(self.table))]))
-        return res['entityType']
 
     def upload(self):
+        self.do_upload()
+        try:
+            self.do_import()
+        finally:
+            self.schedule_reindex()
+
+    def delete(self):
+        base_url = '/datasource/{0}/table/{1}/valueSets?'.format(u(self.project), u(self.table))
+        ids = []
+        # urllen needs to be a mutable object so it can be changed from within send()
+        urllen = [len(base_url)]
+
+        def send():
+            if not ids: return
+            run_rest_command(base_url + '&'.join(ids), method='DELETE')
+            self.schedule_reindex()
+            del ids[:]
+            urllen[0] = len(base_url)
+
+        for id in self.delete_ids():
+            idstring = 'id='+u(id)
+            if urllen[0] + len(idstring) + 1 > MAX_URL_SIZE*10:
+                send()
+            urllen[0] += len(idstring) + 1
+            ids.append(idstring)
+        send()
+
+    def delete_ids(self):
+        with open(self.path) as f:
+            reader = csv.DictReader(f)
+            for l in reader:
+                yield l['id']
+
+    def replace(self):
+        self.do_upload()
+        self.do_truncate()
+        self.schedule_reindex()
+        self.do_import()
+
+    def do_truncate(self):
+        logging.info('Truncating table {0}:{1}'.format(self.project, self.table))
+        run_rest_command(
+            '/datasource/{0}/table/{1}/valueSets'.format(u(self.project), u(self.table)),
+            method='DELETE')
+
+    @property
+    def entity_type(self):
+        if not self._entity_type:
+            logging.debug('loading entity type for table {0}'.format(self.table))
+            res = json.loads(run_rest_command(
+                '/datasource/{0}/table/{1}'.format(u(self.project), u(self.table))))
+            self._entity_type = res['entityType']
+        return self._entity_type
+
+    def do_upload(self):
         #opal file -o <url> -u administrator -p password -up sample.csv /data_import
         #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
+        logging.info('Uploading '+self.path)
         upload_cmd = ['opal', 'file'] + auth_params + ['-up', self.path, opal_folder]
         run_command(upload_cmd)
         
-    def import_(self):
+    def do_import(self):
         # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
         #      -pa <opalfs_self_path> -ty <entity_type> -t <table>
         import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', 
@@ -93,24 +199,26 @@ class ImportFile:
         job_id = result['id']
         status = result['status']
         if status == 'IN_PROGRESS':
-            if not quiet: sys.stderr.write('Waiting for import to finish')
+            if not quiet: sys.stderr.write('Importing data')
             while status == 'IN_PROGRESS':
                 if not quiet: sys.stderr.write('.')
                 time.sleep(1)
-                result = json.loads(run_command(['opal', 'rest'] + auth_params + [
-                                                 '-v', '/project/{0}/command/{1}'.format(u(self.project), u(job_id))]))
+                result = json.loads(run_rest_command(
+                    '/project/{0}/command/{1}'.format(u(self.project), u(job_id))))
                 status = result['status']
                 if status == 'FAILED':
                     raise Exception('Import job failed: {0}'.format(self.name))
             if not quiet: sys.stderr.write('\n')
 
-    def reindex(self):
-        logging.info('rebuilding index for project {0}, table {1}'.format(self.project, self.table))
-        reindex_cmd = ['opal', 'rest'] + auth_params + [
-            '-v', '/datasource/{0}/table/{1}/index'.format(u(self.project), u(self.table)), '-m', 'PUT']
-        run_command(reindex_cmd)
+    def schedule_reindex(self):
+        if self.project not in self.reindex_projects:
+            self.reindex_projects.append(self.project)
 
-    def move_away(self):
+    def done_delete(self):
+        logging.info('deleting {0}'.format(self.path))
+        os.remove(self.path)
+
+    def done_move(self):
         try:
             destpath = path.join(done_folder, self.name)
             if path.exists(destpath):
@@ -121,24 +229,45 @@ class ImportFile:
         logging.info('moving {0} to {1}'.format(self.path, done_folder))
         shutil.move(self.path, done_folder)
 
+    def done_none(self):
+        pass
+
+
+def run_rest_command(url, method=None):
+    m = []
+    if method != None:
+        m = ['-m', method]
+    return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
 
 def run_command(cmd):
-    logging.debug('executing ' + ' '.join(cmd))
+    logging.debug('executing ' + ' '.join(hide_password(cmd)))
+    process = None
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = process.communicate()
         retcode = process.wait()
-        logging.debug(err+'\n'+out)
+        output = err+'\n'+out
+        logging.debug(output)
         if retcode != 0:
-            logging.error('subcommand exited with return code {0}: {1}'.format(retcode, ' '.join(cmd)))
-            err = subprocess.CalledProcessError(retcode, popenargs[0])
+            logging.error('subcommand exited with return code {0}: {1}'.format(
+                retcode, ' '.join(hide_password(cmd))))
+            err = subprocess.CalledProcessError(retcode, hide_password(cmd))
             err.output = output
             raise err
         return out
     except:
-        process.kill()
-        process.wait()
+        if process:
+            if process.poll() is None:
+                process.kill()
+            process.wait()
         raise
+
+def hide_password(cmd):
+    try:
+        password_idx = cmd.index('-p')
+        return cmd[:password_idx+1] + ['{password_not_logged}'] + cmd[password_idx+2:]
+    except ValueError:
+        return cmd
 
 
 # returns a list of ImportFile, ordered by date (oldest first)
@@ -146,27 +275,46 @@ def get_files():
     list = []
     for f in listdir(src_folder):
         fullname = path.join(src_folder, f)
-        if isfile(fullname) and f.endswith('.'+file_type):
-            list.append(ImportFile(f))
+        if isfile(fullname):
+            if f.endswith('.'+file_type):
+                list.append(OpalFile(f))
+            else:
+                logging.debug("Skipping file with wrong format {0}".format(f))
 
     list.sort(key=lambda f: f.name)
     return list
 
 
+def handle_exception(e):
+    logging.error(e)
+    if not verbose:
+        print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
+    logging.debug(e, exc_info=True)
+
 def main():
+    retcode = 0
     try:
         files = get_files()
         if not files:
             logging.warn('Source directory is empty, nothing to do')
+            sys.exit(0)
         for file in files:
             file.process()
+    except Exception as e:
+        handle_exception(e)
+        retcode |= 1
+        
+    # We try to reindex even if there was an error in one of the uploads, to make sure other changed tables are up to date.
+    try:
+        logging.info("updating indexes")
+        OpalFile.reindex_all()
         logging.info('done')
     except Exception as e:
-        logging.error(e)
-        if not verbose:
-            print >>sys.stderr, "Run '{0} -v' for more information".format(sys.argv[0])
-        logging.debug(e, exc_info=True)
-        sys.exit(1)
+        handle_exception(e)
+        retcode |= 2
+
+    sys.exit(retcode)
+    
 
 if __name__ == '__main__':
     main()
