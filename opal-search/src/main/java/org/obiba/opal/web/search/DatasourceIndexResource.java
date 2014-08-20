@@ -41,9 +41,8 @@ public class DatasourceIndexResource extends IndexResource {
     private String datasource;
 
     @GET
-    @ApiOperation(value = "Get index status of all tables in this datasource",
-            response = List.class)
-    public Response /*List<Opal.TableIndexStatusDto>*/ allIndexes() {
+    @ApiOperation(value = "Get index status of all tables in this datasource")
+    public Response allIndexes() {
         if(!valuesIndexManager.isReady()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("SearchServiceUnavailable").build();
         }
@@ -53,7 +52,7 @@ public class DatasourceIndexResource extends IndexResource {
             dtos.add(getTableIndexationDto(datasource, table.getName()).build());
         }
 
-//      note: based on /org/jboss/resteasy/core/ResourceMethodInvoker.java line 304...
+        //note: based on /org/jboss/resteasy/core/ResourceMethodInvoker.java line 304...
 
         return Response.ok().entity(
                 new GenericEntity<List<Opal.TableIndexStatusDto>>(dtos){/*no body, only to preserve generic type*/}
