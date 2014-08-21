@@ -47,4 +47,9 @@ public interface TableUiHandlers extends UiHandlers {
   void onShowValues();
 
   void onDeleteAttribute(List<VariableDto> selectedItems);
+
+  void onShowValidation();
+
+  void onValidate();
+
 }
