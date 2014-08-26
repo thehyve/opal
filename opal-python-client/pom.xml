@@ -247,6 +247,9 @@
                                       <source>
                                           <location>dist/rpm/copyright</location>
                                       </source>
+                                      <source>
+                                          <location>src/main/python/scripts/fileupload.conf.sample</location>
+                                      </source>
                                   </sources>
                               </mapping>
                           </mappings>
