@@ -1,14 +1,31 @@
 # SAMPLE fileupload.conf
 
 [main]
+#url to the opal server
 url = http://localhost:8080
 
+#username
 user = administrator
+#password
 password = password
 
+#file type of files to import. For now only csv is supported
 file_type = csv
+
+#what to do with the file after successful processing, one of move, delete, none
+#move: moves the file to done_folder
+#delete: removes the file
+#none: leaves the file in the source folder (only intended for testing)
 done = move
+
+#Opal FS folder where files will be uploaded to. Make sure its created in Opal FS before use
 opal_folder = /data_import
+
+#local folder where the files are imported from
 src_folder = ~/input
+
+#local folder where files are moved to, on successful import
 done_folder = ~/done
+
+#full path to the log file
 logfile = ~/fileupload.log
