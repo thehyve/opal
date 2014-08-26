@@ -9,6 +9,7 @@
 
   <g:FlowPanel>
     <g:FlowPanel addStyleNames="pull-right">
+
       <b:DropdownButton text="Download" icon="DOWNLOAD" ui:field="downloadBtn" rightDropdown="true">
         <b:NavLink ui:field="downloadDictionary">
           <ui:msg description="Download dictionary label">Download dictionary</ui:msg>

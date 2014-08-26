@@ -172,6 +172,9 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
   Button copyData;
 
   @UiField
+  Button copyScripts;
+
+  @UiField
   NavLink downloadDictionary;
 
   @UiField
@@ -353,6 +356,7 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
     downloadDictionary.setDisabled(!enableItem);
     exportData.setEnabled(enableItem);
     copyData.setEnabled(enableItem);
+    copyScripts.setEnabled(enableItem);
     table.hideLoadingIndicator();
   }
 
@@ -420,6 +424,10 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
     crossOracle.setTable("\"" + tableDto.getName() + "\"");
 
     viewProperties.setVisible(dto.hasViewLink());
+
+    // this button will once be visible on views, not on tables
+    copyScripts.setVisible(dto.hasViewLink());
+
   }
 
   @Override
@@ -530,6 +538,11 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
   void onCopyData(ClickEvent event) {
     getUiHandlers().onCopyData();
   }
+
+  @UiHandler("copyScripts")
+  void onCopyScripts(ClickEvent event) {
+      getUiHandlers().onCopyScripts();
+    }
 
   @UiHandler("copyVariables")
   void onAddVariablesToView(ClickEvent event) {

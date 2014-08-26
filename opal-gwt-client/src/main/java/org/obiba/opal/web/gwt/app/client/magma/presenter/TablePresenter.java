@@ -24,6 +24,7 @@ import org.obiba.opal.web.gwt.app.client.i18n.Translations;
 import org.obiba.opal.web.gwt.app.client.i18n.TranslationsUtils;
 import org.obiba.opal.web.gwt.app.client.js.JsArrays;
 import org.obiba.opal.web.gwt.app.client.magma.copydata.presenter.DataCopyPresenter;
+import org.obiba.opal.web.gwt.app.client.magma.copyscripts.presenter.CopyScriptsPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.event.TableIndexStatusRefreshEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.TableSelectionChangeEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.VariableRefreshEvent;
@@ -121,6 +122,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
 
   private final ModalProvider<DataCopyPresenter> dataCopyModalProvider;
 
+  private final ModalProvider<CopyScriptsPresenter> copyScriptsModalProvider;
+
   private final ValuesTablePresenter valuesTablePresenter;
 
   private final ModalProvider<IndexPresenter> indexPresenter;
@@ -158,6 +161,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
       ModalProvider<TablePropertiesModalPresenter> tablePropertiesModalProvider,
       ModalProvider<DataExportPresenter> dataExportModalProvider,
       ModalProvider<DataCopyPresenter> dataCopyModalProvider,
+      ModalProvider<CopyScriptsPresenter> copyScriptsModalProvider,
       ModalProvider<VariableAttributeModalPresenter> attributeModalProvider, Translations translations,
       TranslationMessages translationMessages) {
     super(eventBus, display);
@@ -175,6 +179,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     this.viewWhereModalProvider = viewWhereModalProvider.setContainer(this);
     this.dataExportModalProvider = dataExportModalProvider.setContainer(this);
     this.dataCopyModalProvider = dataCopyModalProvider.setContainer(this);
+    this.copyScriptsModalProvider = copyScriptsModalProvider.setContainer(this);
     this.crossVariableProvider = crossVariableProvider;
     this.attributeModalProvider = attributeModalProvider.setContainer(this);
     getView().setUiHandlers(this);
@@ -471,7 +476,19 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     copy.setDatasourceName(table.getDatasourceName());
   }
 
-  @Override
+   @Override
+   public void onCopyScripts() {
+     final String datasourceName = table.getDatasourceName();
+
+     CopyScriptsPresenter dlg = copyScriptsModalProvider.get();
+     Set<TableDto> copyTables = new HashSet<>();
+     copyTables.add(table);
+     dlg.setCopyTables(copyTables, false);
+     dlg.setDatasourceName(table.getDatasourceName());
+
+   }
+
+    @Override
   public void onDownloadDictionary() {
     String downloadUrl = table.getLink() + "/variables/excel";
     fireEvent(new FileDownloadRequestEvent(downloadUrl));

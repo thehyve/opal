@@ -12,6 +12,8 @@ package org.obiba.opal.web.gwt.app.client.magma.exportdata;
 import org.obiba.opal.web.gwt.app.client.inject.AbstractOpalModule;
 import org.obiba.opal.web.gwt.app.client.magma.copydata.presenter.DataCopyPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.copydata.view.DataCopyView;
+import org.obiba.opal.web.gwt.app.client.magma.copyscripts.presenter.CopyScriptsPresenter;
+import org.obiba.opal.web.gwt.app.client.magma.copyscripts.view.CopyScriptsView;
 import org.obiba.opal.web.gwt.app.client.magma.exportdata.presenter.DataExportPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.exportdata.view.DataExportView;
 
@@ -24,5 +26,7 @@ public class ExportModule extends AbstractOpalModule {
   protected void configure() {
     bindPresenterWidget(DataExportPresenter.class, DataExportPresenter.Display.class, DataExportView.class);
     bindPresenterWidget(DataCopyPresenter.class, DataCopyPresenter.Display.class, DataCopyView.class);
+    bindPresenterWidget(CopyScriptsPresenter.class, CopyScriptsPresenter.Display.class, CopyScriptsView.class);
+
   }
 }

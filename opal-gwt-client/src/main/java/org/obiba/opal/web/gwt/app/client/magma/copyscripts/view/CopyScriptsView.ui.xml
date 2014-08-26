@@ -1,0 +1,72 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:b="urn:import:com.github.gwtbootstrap.client.ui"
+    xmlns:o="urn:import:org.obiba.opal.web.gwt.app.client.ui"
+    ui:generateFormat='com.google.gwt.i18n.rebind.format.PropertiesFormat'
+    ui:generateKeys="com.google.gwt.i18n.server.keygen.MD5KeyGenerator"
+    ui:generateLocales="default">
+
+  <o:Modal ui:field="modal" resizable="true" closeVisible="true" keyboard="true" animation="false">
+
+    <b:Alert ui:field="copyNTable" close="false" visible="true" type="INFO"/>
+
+    <g:FlowPanel>
+      <!--Destination-->
+      <b:ControlGroup>
+        <b:ControlLabel>
+          <ui:msg description="Source field">Source</ui:msg>
+          <o:RequiredIcon/>
+        </b:ControlLabel>
+        <b:Controls>
+          <o:Chooser ui:field="datasources"/>
+        </b:Controls>
+        <b:HelpBlock>
+          <ui:msg description="Copy Source help">Copy from the selected view.</ui:msg>
+        </b:HelpBlock>
+      </b:ControlGroup>
+
+      <!--New Name-->
+      <b:ControlGroup ui:field="newTableNameGroup" visible="false">
+        <b:ControlLabel>
+          <ui:msg description="Copy Destination Name field">Copy Name</ui:msg>
+        </b:ControlLabel>
+        <b:Controls>
+          <b:TextBox ui:field="newName"/>
+        </b:Controls>
+        <b:HelpBlock>
+          <ui:msg description="Copy Destination Name help">
+            Name under which this table will be copied.
+          </ui:msg>
+        </b:HelpBlock>
+      </b:ControlGroup>
+
+      <o:CollapsiblePanel>
+        <g:FlowPanel>
+          <b:CheckBox ui:field="incremental">
+            <ui:msg description="Incremental checkbox label">incremental</ui:msg>
+          </b:CheckBox>
+          <b:HelpBlock>
+            <ui:msg description="Copy Incremental help">Whether only new or updated data will be copied.</ui:msg>
+          </b:HelpBlock>
+          <b:CheckBox ui:field="copyNullValues">
+            <ui:msg description="Incremental checkbox label">copy null values</ui:msg>
+          </b:CheckBox>
+          <b:HelpBlock>
+            <ui:msg description="Copy Destination Name help">Whether a data can be overridden by a null value.</ui:msg>
+          </b:HelpBlock>
+        </g:FlowPanel>
+      </o:CollapsiblePanel>
+
+    </g:FlowPanel>
+
+    <b:ModalFooter>
+      <b:Button ui:field="submitButton" type="PRIMARY">
+        <ui:msg description="Submit button label">Submit</ui:msg>
+      </b:Button>
+      <b:Button ui:field="cancelButton">
+        <ui:msg description="Cancel button label">Cancel</ui:msg>
+      </b:Button>
+    </b:ModalFooter>
+  </o:Modal>
+
+</ui:UiBinder>

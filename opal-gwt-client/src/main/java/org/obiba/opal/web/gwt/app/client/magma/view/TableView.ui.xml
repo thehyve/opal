@@ -28,7 +28,14 @@
           <ui:msg description="Download view label">Download view</ui:msg>
         </b:NavLink>
       </b:DropdownButton>
-      <b:ButtonGroup>
+
+        <b:ButtonGroup>
+            <b:Button icon="CODE" ui:field="copyScripts">
+                <ui:msg description="Copy scripts label">Copy scripts</ui:msg>
+            </b:Button>
+        </b:ButtonGroup>
+
+        <b:ButtonGroup>
         <b:Button icon="DOWNLOAD_ALT" ui:field="exportData">
           <ui:msg description="Export label">Export</ui:msg>
         </b:Button>

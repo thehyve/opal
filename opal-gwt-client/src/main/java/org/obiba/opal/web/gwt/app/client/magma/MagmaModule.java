@@ -10,6 +10,7 @@
 package org.obiba.opal.web.gwt.app.client.magma;
 
 import org.obiba.opal.web.gwt.app.client.inject.AbstractOpalModule;
+import org.obiba.opal.web.gwt.app.client.magma.copyscripts.presenter.CopyScriptsPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.datasource.presenter.CsvDatasourceFormPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.datasource.presenter.DatasourceFormPresenterSubscriber;
 import org.obiba.opal.web.gwt.app.client.magma.datasource.presenter.ExcelDatasourceFormPresenter;
@@ -98,6 +99,7 @@ public class MagmaModule extends AbstractOpalModule {
         VariableAttributeModalView.class);
     bindPresenterWidget(AddVariablesModalPresenter.class, AddVariablesModalPresenter.Display.class,
         AddVariablesModalView.class);
+
 
   }
 
