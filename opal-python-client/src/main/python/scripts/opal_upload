@@ -14,9 +14,11 @@ from urllib import quote_plus
 import shutil
 from os import path, listdir
 from os.path import expanduser, isfile
+import time
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
+current_time_millis = lambda: int(round(time.time() * 1000))
 
 
 ## Parse config file ##
@@ -119,6 +121,7 @@ class OpalFile:
     # processes this file
     def process(self):
         logging.info('processing '+self.name)
+        time1 = current_time_millis()
 
         if not self.operation in self.operations:
             raise Exception("Operation '{0}' not implemented".format(self.operation))
@@ -127,8 +130,8 @@ class OpalFile:
 
         getattr(self, 'done_'+done)()
 
-        logging.info('finished processing ' + self.name)
-
+        ellapsed = current_time_millis() - time1
+        logging.info('finished processing %s in %s millis', self.name, ellapsed)
 
     def upload(self):
         self.do_upload()
