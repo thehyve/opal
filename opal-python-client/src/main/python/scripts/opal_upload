@@ -53,10 +53,10 @@ parse_config()
 ## Configure logging ##
 
 def configure_logging():
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
 
     logfilehandler = logging.FileHandler(logfile)
-    logfilehandler.setLevel(logging.DEBUG)
+    logfilehandler.setLevel(logging.INFO)
     logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
     logging.getLogger().addHandler(logfilehandler)
 
@@ -64,6 +64,8 @@ def configure_logging():
     stderrhandler.setLevel(logging.INFO)
     if verbose:
         stderrhandler.setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
+        logfilehandler.setLevel(logging.DEBUG)
     if quiet:
         stderrhandler.setLevel(logging.WARN)
     logging.getLogger().addHandler(stderrhandler)
@@ -81,7 +83,7 @@ def u(it):
 class OpalFile:
 
     reindex_projects = []
-    operations = ['upload', 'delete', 'replace']
+    operations = ['update', 'delete', 'replace']
 
     @staticmethod
     def do_reindex(project):
