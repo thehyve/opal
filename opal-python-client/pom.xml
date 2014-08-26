@@ -214,6 +214,7 @@
                                           <location>${basedir}/target/opal-python/bin/scripts</location>
                                           <includes>
                                               <include>opal</include>
+                                              <include>opal_upload</include>
                                           </includes>
                                       </source>
                                   </sources>
