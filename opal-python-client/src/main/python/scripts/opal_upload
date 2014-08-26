@@ -133,7 +133,7 @@ class OpalFile:
         ellapsed = current_time_millis() - time1
         logging.info('finished processing %s in %s millis', self.name, ellapsed)
 
-    def upload(self):
+    def update(self):
         self.do_upload()
         try:
             self.do_import()
