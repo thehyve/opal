@@ -370,6 +370,7 @@ public interface Translations extends Constants {
       "ScriptIsRequired", "A script is required.",//
       "JavascriptError", "Error in script '{0}': {1} ({2}:{3})",//
       "JavaScriptException", "Error in script: {0}",//
+      "MagmaRuntimeException", "{0}",//
       "ValuesEvaluationError", "Error when evaluating values: {0}",//
       "CopyFromVariableNameIsRequired",
       "You must enter the name of a variable from which the new variable will be created from.",//
@@ -2178,6 +2179,14 @@ public interface Translations extends Constants {
   @Description("Variable not found label")
   @DefaultStringValue("Variable not found: {0}")
   String variableNotFound();
+
+  @Description("Variable not categorical label")
+  @DefaultStringValue("Variable is not categorical: {0}")
+  String variableNotCategorical();
+
+  @Description("Variable not categorical nor continuous label")
+  @DefaultStringValue("Variable is not categorical nor continuous: {0}")
+  String variableNotCategoricalNorContinuous();
 
   @Description("NA (total: {N}) label")
   @DefaultStringValue("N/A (total: {0})")
