@@ -12,14 +12,18 @@ from ConfigParser import ConfigParser
 import csv
 from urllib import quote_plus
 import shutil
+from StringIO import StringIO
 from os import path, listdir
 from os.path import expanduser, isfile
-import time
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
-current_time_millis = lambda: int(round(time.time() * 1000))
 
+
+# This exception indicates that this is a known error condition handled by the code, so no need to print stacktraces
+# and such.
+class OpalUploadError (Exception):
+    pass
 
 ## Parse config file ##
 
@@ -55,7 +59,7 @@ parse_config()
 ## Configure logging ##
 
 def configure_logging():
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     logfilehandler = logging.FileHandler(logfile)
     logfilehandler.setLevel(logging.INFO)
@@ -66,7 +70,6 @@ def configure_logging():
     stderrhandler.setLevel(logging.INFO)
     if verbose:
         stderrhandler.setLevel(logging.DEBUG)
-        logging.getLogger().setLevel(logging.DEBUG)
         logfilehandler.setLevel(logging.DEBUG)
     if quiet:
         stderrhandler.setLevel(logging.WARN)
@@ -121,7 +124,7 @@ class OpalFile:
     # processes this file
     def process(self):
         logging.info('processing '+self.name)
-        time1 = current_time_millis()
+        start_time = time.time()
 
         if not self.operation in self.operations:
             raise Exception("Operation '{0}' not implemented".format(self.operation))
@@ -130,8 +133,7 @@ class OpalFile:
 
         getattr(self, 'done_'+done)()
 
-        ellapsed = current_time_millis() - time1
-        logging.info('finished processing %s in %s millis', self.name, ellapsed)
+        logging.info('finished processing {0} in {1:.3f} seconds'.format(self.name, time.time() - start_time))
 
     def update(self):
         self.do_upload()
@@ -141,29 +143,37 @@ class OpalFile:
             self.schedule_reindex()
 
     def delete(self):
+        # Delete ids are sent as url parameters. Sending a too large url results in an error 413 FULL HEAD,
+        # so we need to split large deletions up over several requests.
         base_url = '/datasource/{0}/table/{1}/valueSets?'.format(u(self.project), u(self.table))
-        ids = []
-        # urllen needs to be a mutable object so it can be changed from within send()
-        urllen = [len(base_url)]
+        url = StringIO()
+        url.write(base_url)
 
         def send():
-            if not ids: return
-            run_rest_command(base_url + '&'.join(ids), method='DELETE')
+            # if no ids return
+            if url.len == len(base_url): return
+            # strip off last '&'
+            run_rest_command(url.getvalue()[:-1], method='DELETE')
             self.schedule_reindex()
-            del ids[:]
-            urllen[0] = len(base_url)
+            url.seek(0)
+            url.truncate()
+            url.write(base_url)
+            if not quiet: sys.stderr.write('.')
 
+        if not quiet: sys.stderr.write('Deleting')
         for id in self.delete_ids():
             idstring = 'id='+u(id)
-            if urllen[0] + len(idstring) + 1 > MAX_URL_SIZE*10:
+            if url.len + len(idstring) > MAX_URL_SIZE:
                 send()
-            urllen[0] += len(idstring) + 1
-            ids.append(idstring)
+            url.write(idstring+'&')
         send()
+        if not quiet: sys.stderr.write('\n')
 
     def delete_ids(self):
         with open(self.path) as f:
             reader = csv.DictReader(f)
+            if not 'id' in reader.fieldnames:
+                raise OpalUploadError("No column named 'id' found in csv file '{1}'".format(self.path))
             for l in reader:
                 yield l['id']
 
@@ -255,7 +265,7 @@ def run_command(cmd):
         logging.debug(output)
         if retcode != 0:
             logging.error('subcommand exited with return code {0}: {1}'.format(
-                retcode, ' '.join(hide_password(cmd))))
+                retcode, limit_length(' '.join(hide_password(cmd)))))
             err = subprocess.CalledProcessError(retcode, hide_password(cmd))
             err.output = output
             raise err
@@ -274,6 +284,11 @@ def hide_password(cmd):
     except ValueError:
         return cmd
 
+def limit_length(msg, maxlen=1000, end=".....rest of message not shown...."):
+    if len(msg) > maxlen:
+        msg = msg[:1000-len(end)] + end
+    return msg
+
 
 # returns a list of ImportFile, ordered by date (oldest first)
 def get_files():
@@ -291,7 +306,14 @@ def get_files():
 
 
 def handle_exception(e):
-    logging.error(e)
+    if isinstance(e, OpalUploadError):
+        logging.error('Error: ' + e.message)
+        return
+
+    msg = "Error: {0}: {1}".format(type(e).__name__, e)
+    if not verbose:
+        msg = limit_length(msg)
+    logging.error(msg)
     if not verbose:
         print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
     logging.debug(e, exc_info=True)
@@ -311,7 +333,6 @@ def main():
         
     # We try to reindex even if there was an error in one of the uploads, to make sure other changed tables are up to date.
     try:
-        logging.info("updating indexes")
         OpalFile.reindex_all()
         logging.info('done')
     except Exception as e:
