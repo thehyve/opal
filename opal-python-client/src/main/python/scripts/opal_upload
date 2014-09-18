@@ -54,6 +54,9 @@ def parse_config():
         logging.error('done = {0}, should be one of "move", "delete" or "none"'.format(done))
         sys.exit(1)
 
+    if not done_folder.endswith('/'):
+        done_folder += '/'
+
 parse_config()
 
 ## Configure logging ##
@@ -206,7 +209,12 @@ class OpalFile:
         #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
         logging.info('Uploading '+self.path)
         upload_cmd = ['opal', 'file'] + auth_params + ['-up', self.path, opal_folder]
-        run_command(upload_cmd)
+        try:
+            run_command(upload_cmd)
+        except subprocess.CalledProcessError as e:
+            if '404 Not Found' in e.output:
+                raise OpalUploadError("Folder '{0}' does not exist on the server".format(opal_folder))
+            raise
         
     def do_import(self):
         # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
@@ -238,6 +246,8 @@ class OpalFile:
         os.remove(self.path)
 
     def done_move(self):
+        if not path.isdir(done_folder):
+            raise OpalUploadError("done_folder '{0}' does not exist".format(done_folder))
         try:
             destpath = path.join(done_folder, self.name)
             if path.exists(destpath):
@@ -247,7 +257,10 @@ class OpalFile:
             logging.error(e)
             logging.log(LOGFILEINFO, e, exc_info=True)
         logging.info('moving {0} to {1}'.format(self.path, done_folder))
-        shutil.move(self.path, done_folder)
+        try:
+            shutil.move(self.path, done_folder)
+        except OSError as e:
+            raise OpalUploadError("Cannot move file to done_folder: "+str(e))
 
     def done_none(self):
         pass
@@ -269,7 +282,7 @@ def run_command(cmd):
         output = err+'\n'+out
         logging.debug(output)
         if retcode != 0:
-            logging.error('subcommand exited with return code {0}: {1}'.format(
+            logging.log(LOGFILEINFO, 'subcommand exited with return code {0}: {1}'.format(
                 retcode, limit_length(' '.join(hide_password(cmd)))))
             err = subprocess.CalledProcessError(retcode, hide_password(cmd))
             err.output = output
@@ -298,7 +311,11 @@ def limit_length(msg, maxlen=1000, end=".....rest of message not shown...."):
 # returns a list of ImportFile, ordered by date (oldest first)
 def get_files():
     list = []
-    for f in listdir(src_folder):
+    try:
+        files = listdir(src_folder)
+    except OSError as e:
+        raise OpalUploadError("Can not access src_folder: " + str(e))
+    for f in files:
         fullname = path.join(src_folder, f)
         if isfile(fullname):
             if f.endswith('.'+file_type):
@@ -312,7 +329,7 @@ def get_files():
 
 def handle_exception(e):
     if isinstance(e, OpalUploadError):
-        logging.error('Error: ' + e.message)
+        logging.error('Error: ' + str(e))
         return
 
     msg = "Error: {0}: {1}".format(type(e).__name__, e)
