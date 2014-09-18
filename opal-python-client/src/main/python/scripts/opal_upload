@@ -147,6 +147,7 @@ class OpalFile:
             self.do_import()
         finally:
             self.schedule_reindex()
+            self.do_remove_uploaded()
 
     def delete(self):
         # Delete ids are sent as url parameters. Sending a too large url results in an error 413 FULL HEAD,
@@ -188,6 +189,7 @@ class OpalFile:
         self.do_truncate()
         self.schedule_reindex()
         self.do_import()
+        self.do_remove_uploaded()
 
     def do_truncate(self):
         logging.info('Truncating table {0}:{1}'.format(self.project, self.table))
@@ -236,6 +238,11 @@ class OpalFile:
                 if status == 'FAILED':
                     raise Exception('Import job failed: {0}'.format(self.name))
             if not quiet: sys.stderr.write('\n')
+
+    def do_remove_uploaded(self):
+        # opal file -o <url> -u administrator -p password --delete /data_import/sample.csv
+        remove_cmd = ['opal', 'file'] + auth_params + ['--delete', opal_folder + '/' + self.name, '-f']
+        run_command(remove_cmd)
 
     def schedule_reindex(self):
         if self.project not in self.reindex_projects:
