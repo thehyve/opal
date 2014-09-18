@@ -66,7 +66,6 @@ public class DatasourceIndexResource extends IndexResource {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("SearchServiceUnavailable").build();
         }
 
-        List<String> tables = Lists.newArrayList();
         for(ValueTable table : getDatasource().getValueTables()) {
             updateIndex(table);
         }
@@ -81,10 +80,10 @@ public class DatasourceIndexResource extends IndexResource {
     }
 
     void updateIndex(ValueTable table) {
-
-        if(!isInProgress(datasource, table.getName())) {
-            // synchronize variable index and values index
+        if (!synchroManager.isAlreadyQueued(variablesIndexManager, getValueTableIndex(datasource, table.getName()))) {
             synchroManager.synchronizeIndex(variablesIndexManager, table, 0);
+        }
+        if (!synchroManager.isAlreadyQueued(valuesIndexManager, getValueTableIndex(datasource, table.getName()))) {
             synchroManager.synchronizeIndex(valuesIndexManager, table, 0);
         }
     }
