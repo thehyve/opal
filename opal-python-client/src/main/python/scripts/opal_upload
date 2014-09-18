@@ -8,7 +8,7 @@ import logging
 import subprocess
 import json
 import time
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 import csv
 from urllib import quote_plus
 import shutil
@@ -27,19 +27,35 @@ class OpalUploadError (Exception):
 
 ## Parse config file ##
 
-def parse_config():
+CONFIGFILE = expanduser('~/.opal/fileupload.conf')
+
+def setup():
     global url, file_type, done, src_folder, done_folder, opal_folder, logfile, auth_params
 
     config = ConfigParser()
-    config.read(expanduser('~/.opal/fileupload.conf'))
+    try:
+        with open(CONFIGFILE) as conf:
+            config.readfp(conf)
 
-    url = config.get('main', 'url')
-    file_type = config.get('main', 'file_type')
-    done = config.get('main', 'done')
-    src_folder = expanduser(config.get('main', 'src_folder'))
-    done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
-    opal_folder = config.get('main', 'opal_folder')
-    logfile = expanduser(config.get('main', 'logfile'))
+            url = config.get('main', 'url')
+            file_type = config.get('main', 'file_type')
+            done = config.get('main', 'done')
+            src_folder = expanduser(config.get('main', 'src_folder'))
+            done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
+            opal_folder = config.get('main', 'opal_folder')
+            logfile = expanduser(config.get('main', 'logfile'))
+
+    except IOError as e:
+        if e.errno == 2:
+            handle_exception(OpalUploadError("Configuration file not found: "+CONFIGFILE))
+            sys.exit(1)
+        raise
+    except (NoSectionError, NoOptionError) as e:
+        handle_exception(OpalUploadError("Error reading configuration file: "+str(e)))
+        sys.exit(1)
+
+
+    configure_logging()
 
     if config.has_option('main', 'use_certificate') and \
        config.getboolean('main', 'use_certificate'):
@@ -48,27 +64,29 @@ def parse_config():
         auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
 
     if file_type != 'csv':
-        logging.error('file_type = {0}. File types other than "csv" are not currently supported'.format(file_type))
+        handle_exception(OpalUploadError(
+            'Configuration file error: file_type = {0}. File types other than "csv" are not currently '
+            'supported'.format(file_type)))
         sys.exit(1)
     if done not in ('move', 'delete', 'none'):
-        logging.error('done = {0}, should be one of "move", "delete" or "none"'.format(done))
+        handle_exception(OpalUploadError(
+            'Configureation file error: done = {0}, should be one of "move", "delete" or "none"'.format(done)))
         sys.exit(1)
 
     if not done_folder.endswith('/'):
         done_folder += '/'
 
-parse_config()
 
 ## Configure logging ##
 
 # define an intermediate level for info that should by default be logged to the logfile but not to the command line
-LOGFILEINFO = logging.INFO - 5
-logging.addLevelName(LOGFILEINFO, 'LOGFILEINFO')
+LOGINFO = logging.INFO - 5
+logging.addLevelName(LOGINFO, 'LOGINFO')
 def configure_logging():
     logging.getLogger().setLevel(logging.DEBUG)
 
     logfilehandler = logging.FileHandler(logfile)
-    logfilehandler.setLevel(LOGFILEINFO)
+    logfilehandler.setLevel(LOGINFO)
     logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
     logging.getLogger().addHandler(logfilehandler)
 
@@ -80,8 +98,6 @@ def configure_logging():
     if quiet:
         stderrhandler.setLevel(logging.WARN)
     logging.getLogger().addHandler(stderrhandler)
-
-configure_logging()
 
 
 MAX_URL_SIZE = 2000
@@ -200,7 +216,7 @@ class OpalFile:
     @property
     def entity_type(self):
         if not self._entity_type:
-            logging.log(LOGFILEINFO, 'loading entity type for table {0}'.format(self.table))
+            logging.log(LOGINFO, 'loading entity type for table {0}'.format(self.table))
             res = json.loads(run_rest_command(
                 '/datasource/{0}/table/{1}'.format(u(self.project), u(self.table))))
             self._entity_type = res['entityType']
@@ -226,7 +242,7 @@ class OpalFile:
         result = json.loads(run_command(import_cmd))
         job_id = result['id']
         status = result['status']
-        logging.log(LOGFILEINFO, "Import job ID: "+str(job_id))
+        logging.log(LOGINFO, "Import job ID: "+str(job_id))
         if status == 'IN_PROGRESS':
             if not quiet: sys.stderr.write('Importing data (job id {0})'.format(job_id))
             while status == 'IN_PROGRESS':
@@ -262,7 +278,7 @@ class OpalFile:
                 os.remove(destpath)
         except OSError as e:
             logging.error(e)
-            logging.log(LOGFILEINFO, e, exc_info=True)
+            logging.log(LOGINFO, e, exc_info=True)
         logging.info('moving {0} to {1}'.format(self.path, done_folder))
         try:
             shutil.move(self.path, done_folder)
@@ -280,7 +296,7 @@ def run_rest_command(url, method=None):
     return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
 
 def run_command(cmd):
-    logging.log(LOGFILEINFO, 'executing ' + ' '.join(hide_password(cmd)))
+    logging.log(LOGINFO, 'executing ' + ' '.join(hide_password(cmd)))
     process = None
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -289,8 +305,12 @@ def run_command(cmd):
         output = err+'\n'+out
         logging.debug(output)
         if retcode != 0:
-            logging.log(LOGFILEINFO, 'subcommand exited with return code {0}: {1}'.format(
+            logging.log(LOGINFO, 'subcommand exited with return code {0}: {1}'.format(
                 retcode, limit_length(' '.join(hide_password(cmd)))))
+            if '401 Unauthorized' in output:
+                raise OpalUploadError("Authorization failed, make sure your username and password are correct")
+            if 'Could not resolve host' in output:
+                raise OpalUploadError("Could not resolve hostname: "+url)
             err = subprocess.CalledProcessError(retcode, hide_password(cmd))
             err.output = output
             raise err
@@ -328,7 +348,7 @@ def get_files():
             if f.endswith('.'+file_type):
                 list.append(OpalFile(f))
             else:
-                logging.log(LOGFILEINFO, "Skipping file with wrong format {0}".format(f))
+                logging.log(LOGINFO, "Skipping file with wrong format {0}".format(f))
 
     list.sort(key=lambda f: f.name)
     return list
@@ -340,6 +360,9 @@ def handle_exception(e):
         return
 
     msg = "Error: {0}: {1}".format(type(e).__name__, e)
+    if isinstance(e, subprocess.CalledProcessError):
+        msg += '\nCommand output: ' + e.output.rstrip()
+
     logging.error(msg)
     if not verbose:
         print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
@@ -370,4 +393,5 @@ def main():
     
 
 if __name__ == '__main__':
+    setup()
     main()
