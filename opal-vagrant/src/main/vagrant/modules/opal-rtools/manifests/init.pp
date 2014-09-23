@@ -40,10 +40,26 @@ class opal-rtools () {
     ensure  => present,
     system  => true,
     home    => '/var/lib/rserve',
+
   } -> file { '/etc/init.d/rserver':
     ensure  => file,
     source  => 'puppet:///modules/opal-rtools/rserver',
     mode    => 744,
+  
+  } -> file { '/var/lib/rserve/packages.R':
+    ensure  => file,
+    source  => 'puppet:///modules/opal-rtools/packages.R',
+
+  } -> exec { 'install_R_packages':
+    command => "R -q -f packages.R > logs/install_packages.log",
+    cwd     => '/var/lib/rserve',
+    path    => '/bin:/usr/bin',
+/*
+  } -> service { 'rserver':
+    ensure  => running,
+    enable  => true,
+*/ 
   }
-}
+} 
+
  
