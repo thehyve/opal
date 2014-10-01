@@ -18,6 +18,7 @@ import java.util.Map;
 import org.obiba.opal.web.gwt.app.client.event.NotificationEvent;
 import org.obiba.opal.web.gwt.app.client.fs.event.FileDownloadRequestEvent;
 import org.obiba.opal.web.gwt.app.client.i18n.TranslationMessages;
+import org.obiba.opal.web.gwt.app.client.js.JsArrays;
 import org.obiba.opal.web.gwt.app.client.magma.event.GeoValueDisplayEvent;
 import org.obiba.opal.web.gwt.app.client.presenter.ModalPresenterWidget;
 import org.obiba.opal.web.gwt.app.client.presenter.ModalProvider;
@@ -65,16 +66,17 @@ public class EntityModalPresenter extends ModalPresenterWidget<EntityModalPresen
   public EntityModalPresenter(EventBus eventBus, Display display,
       ModalProvider<ValueSequencePopupPresenter> valueSequencePopupProvider) {
     super(eventBus, display);
+    getView().setUiHandlers(this);
     this.valueSequencePopupProvider = valueSequencePopupProvider.setContainer(this);
   }
 
   @SuppressWarnings("ParameterHidesMemberVariable")
   public void initialize(TableDto table, String entityType, String entityId, String filterText) {
-    selectedTable = table;
+    if (table == null) selectedTable = null;
+    else if(table.getEntityType().equals(entityType)) selectedTable = table;
     this.entityType = entityType;
     this.entityId = entityId;
-    getView().setUiHandlers(this);
-    getView().setFilterText(filterText);
+    getView().setFilterText(table != null && table.getEntityType().equals(entityType) ? filterText : "");
     getView().setEntityType(entityType);
     getView().setEntityId(entityId);
     getView().setValueViewHandler(new ValueSequenceHandlerImpl());
@@ -115,14 +117,22 @@ public class EntityModalPresenter extends ModalPresenterWidget<EntityModalPresen
   private void loadTables() {
     UriBuilder uriBuilder = UriBuilder.create().segment("entity", entityId, "type", entityType, "tables");
     ResourceRequestBuilderFactory.<JsArray<TableDto>>newBuilder().forResource(uriBuilder.build()).get()
-        .withCallback(Response.SC_INTERNAL_SERVER_ERROR, new ResponseErrorCallback(getEventBus(), "InternalError"))
-        .withCallback(Response.SC_NOT_FOUND,
-            new ResponseErrorCallback(getEventBus(), "NoTablesForEntityIdType", entityId, entityType))//
+        .withCallback(Response.SC_INTERNAL_SERVER_ERROR,
+            new ResponseErrorCallback(getEventBus(), "InternalError")).withCallback(Response.SC_NOT_FOUND,
+        new ResponseErrorCallback(getEventBus(), "NoTablesForEntityIdType", entityId, entityType))//
         .withCallback(new ResourceCallback<JsArray<TableDto>>() {
           @Override
           public void onResource(Response response, JsArray<TableDto> resource) {
-            getView().setTables(resource, selectedTable);
-            loadVariablesInternal(selectedTable, getView().getFilterText());
+            JsArray<TableDto> tables = JsArrays.toSafeArray(resource);
+            if(tables.length() == 0) {
+              getView().setTables(tables, null);
+              getEventBus()
+                  .fireEvent(NotificationEvent.newBuilder().warn("NoSuchEntity").args(entityId, entityType).build());
+            } else {
+              if(selectedTable == null) selectedTable = tables.get(0);
+              getView().setTables(tables, selectedTable);
+              loadVariablesInternal(selectedTable, getView().getFilterText());
+            }
           }
         }).send();
   }
@@ -155,8 +165,9 @@ public class EntityModalPresenter extends ModalPresenterWidget<EntityModalPresen
 
         ResourceRequestBuilderFactory.<ValueSetsDto>newBuilder().forResource(uriBuilder.build()).get()
             .withCallback(Response.SC_INTERNAL_SERVER_ERROR, new ResponseErrorCallback(getEventBus(), "InternalError"))
-            .withCallback(Response.SC_NOT_FOUND, new ResponseErrorCallback(getEventBus(), "NoVariableValuesFound"))
-            .withCallback(Response.SC_BAD_REQUEST, new BadRequestCallback())//
+            .withCallback(Response.SC_NOT_FOUND,
+                new ResponseErrorCallback(getEventBus(), "NoVariableValuesFound")).withCallback(Response.SC_BAD_REQUEST,
+            new BadRequestCallback())//
             .withCallback(new ResourceCallback<ValueSetsDto>() {
               @Override
               public void onResource(Response response, ValueSetsDto resource) {
@@ -309,6 +320,8 @@ public class EntityModalPresenter extends ModalPresenterWidget<EntityModalPresen
     void requestBinaryValueView(VariableDto variable);
 
     void requestGeoValueView(VariableDto variable, ValueSetsDto.ValueDto value);
+
+    void requestEntityView(VariableDto variable, ValueSetsDto.ValueDto value);
   }
 
   public class ValueSequenceHandlerImpl implements ValueViewHandler {
@@ -329,6 +342,11 @@ public class EntityModalPresenter extends ModalPresenterWidget<EntityModalPresen
     @Override
     public void requestGeoValueView(VariableDto variable, ValueSetsDto.ValueDto value) {
       getEventBus().fireEvent(new GeoValueDisplayEvent(variable, entityId, value));
+    }
+
+    @Override
+    public void requestEntityView(VariableDto variable, ValueSetsDto.ValueDto value) {
+      initialize(null, variable.getReferencedEntityType(), value.getValue(), "");
     }
   }
 }

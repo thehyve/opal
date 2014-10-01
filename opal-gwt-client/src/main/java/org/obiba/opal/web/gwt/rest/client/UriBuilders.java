@@ -294,6 +294,22 @@ public enum UriBuilders {
     }
   },
 
+  SYSTEM_CONF_TAXONOMIES_IMPORT_DEFAULT {
+    @Override
+    public UriBuilder create() {
+      return UriBuilder.create().segment("system", "conf", "taxonomies", "import", "_default");
+
+    }
+  },
+
+  SYSTEM_CONF_TAXONOMIES_SUMMARIES {
+    @Override
+    public UriBuilder create() {
+      return UriBuilder.create().segment("system", "conf", "taxonomies", "summaries");
+
+    }
+  },
+
   SYSTEM_CONF_TAXONOMY_VOCABULARY {
     @Override
     public UriBuilder create() {

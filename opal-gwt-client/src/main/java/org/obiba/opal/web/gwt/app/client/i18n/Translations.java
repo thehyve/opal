@@ -447,6 +447,7 @@ public interface Translations extends Constants {
       "NoSuchVariable", "No such variable '{0}'.",//
       "NoSuchVariableInTable", "No such variable '{0}' in table '{1}'.",//
       "NoSuchValueTable", "No such table '{0}'.",//
+      "NoSuchEntity", "No such entity '{0}' of type '{1}'.",//
       "NoSuchValueTableInDatasource", "No such table '{0}' in datasource '{1}'.",//
       "NoSuchReportTemplate", "No such report template '{0}' in project '{1}'.",//
       "InvalidVariableScript", "Invalid variable script:<br /><br /><pre>{0}</pre>",//
@@ -1585,6 +1586,22 @@ public interface Translations extends Constants {
   @Constants.DefaultStringValue("Filter variables...")
   String filterVariables();
 
+  @Description("Filter Table label")
+  @Constants.DefaultStringValue("Filter tables...")
+  String filterTables();
+
+  @Description("Filter Project label")
+  @Constants.DefaultStringValue("Filter projects...")
+  String filterProjects();
+
+  @Description("Filter Vocabulary label")
+  @Constants.DefaultStringValue("Filter vocabularies...")
+  String filterVocabularies();
+
+  @Description("Filter Term label")
+  @Constants.DefaultStringValue("Filter terms...")
+  String filterTerms();
+
   @Description("Clear filter label")
   @DefaultStringValue("Clear filter")
   String clearFilter();
@@ -1959,6 +1976,10 @@ public interface Translations extends Constants {
   @DefaultStringValue("Vocabularies")
   String vocabulariesLabel();
 
+  @Description("Terms label")
+  @DefaultStringValue("Terms")
+  String termsLabel();
+
   @Description("New vocabulary name label")
   @DefaultStringValue("New vocabulary name")
   String newVocabularyNameLabel();
@@ -2311,4 +2332,8 @@ public interface Translations extends Constants {
   @Description("No Tables for EntityType label")
   @DefaultStringValue("No tables for this entity type.")
   String noTablesforEntityType();
+
+  @Description("Launch garbage collector title")
+  @DefaultStringValue("Launch garbage collector")
+  String launchGarbageCollectorTitle();
 }

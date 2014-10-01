@@ -160,6 +160,13 @@ public class VocabularyEditView extends ViewWithUiHandlers<VocabularyEditUiHandl
       public Map<String, LocalizedEditableText> getLocalizedEditableTextMap() {
         return vocabularyDescriptionTexts;
       }
+
+      @Override
+      protected LocalizedEditableText getTextValueInput(String locale, String text) {
+        LocalizedEditableText textWidget = super.getTextValueInput(locale, text);
+        textWidget.setLargeText(true);
+        return textWidget;
+      }
     };
   }
 
@@ -217,6 +224,13 @@ public class VocabularyEditView extends ViewWithUiHandlers<VocabularyEditUiHandl
 
         return termsDescriptionTexts.get(title);
       }
+
+      @Override
+      protected LocalizedEditableText getTextValueInput(String locale, String text) {
+        LocalizedEditableText textWidget = super.getTextValueInput(locale, text);
+        textWidget.setLargeText(true);
+        return textWidget;
+      }
     };
   }
 
@@ -272,9 +286,6 @@ public class VocabularyEditView extends ViewWithUiHandlers<VocabularyEditUiHandl
       for(int i = 0; i < nb; i++) {
         FocusPanel focusPanel = getTermFocusPanel(terms.get(i), dragController, level);
         target.add(focusPanel);
-        if(terms.get(i).getTermsCount() > 0) {
-          target.add(addTermsLinks(vocabulary, terms.get(i).getTermsArray(), level + 1));
-        }
       }
     }
 
@@ -412,7 +423,7 @@ public class VocabularyEditView extends ViewWithUiHandlers<VocabularyEditUiHandl
       return texts;
     }
 
-    private LocalizedEditableText getTextValueInput(String locale, String text) {
+    protected LocalizedEditableText getTextValueInput(String locale, String text) {
       LocalizedEditableText localizedText = new LocalizedEditableText();
       localizedText.setValue(new LocalizedEditableText.LocalizedText(locale, text));
 

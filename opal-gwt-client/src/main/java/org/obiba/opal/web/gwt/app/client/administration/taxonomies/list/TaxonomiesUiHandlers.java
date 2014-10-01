@@ -1,16 +1,15 @@
 package org.obiba.opal.web.gwt.app.client.administration.taxonomies.list;
 
-import org.obiba.opal.web.model.client.opal.TaxonomyDto;
+import org.obiba.opal.web.model.client.opal.TaxonomiesDto;
 
 import com.gwtplatform.mvp.client.UiHandlers;
 
 public interface TaxonomiesUiHandlers extends UiHandlers {
 
-  void onTaxonomySelection(TaxonomyDto taxonomyDto);
+  void onTaxonomySelection(TaxonomiesDto.TaxonomySummaryDto taxonomyDto);
 
   void onAddTaxonomy();
 
-  void onTaxonomyEdit(TaxonomyDto taxonomyDto);
+  void onImportDefaultTaxonomies();
 
-  void onVocabularySelection(String name, String vocabulary);
 }
