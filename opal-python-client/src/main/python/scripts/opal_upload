@@ -245,23 +245,32 @@ class OpalFile:
     def do_import(self):
         # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
         #      -pa <opalfs_self_path> -ty <entity_type> -t <table>
-        import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', 
+        import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', '-ncv',
                       '-pa', opal_folder+'/'+self.name, '-ty', self.entity_type, '-t', self.table]
         result = json.loads(run_command(import_cmd))
         job_id = result['id']
         status = result['status']
         logging.log(LOGINFO, "Import job ID: "+str(job_id))
-        if status == 'IN_PROGRESS':
-            if not quiet: sys.stderr.write('Importing data (job id {0})'.format(job_id))
-            while status == 'IN_PROGRESS':
-                if not quiet: sys.stderr.write('.')
-                time.sleep(1)
-                result = json.loads(run_rest_command(
-                    '/project/{0}/command/{1}'.format(u(self.project), u(job_id))))
-                status = result['status']
-                if status == 'FAILED':
-                    raise Exception('Import job failed: {0}'.format(self.name))
-            if not quiet: sys.stderr.write('\n')
+        if not quiet: sys.stderr.write('Importing data (job id {0})'.format(job_id))
+        while status == 'IN_PROGRESS':
+            if not quiet: sys.stderr.write('.')
+            time.sleep(1)
+            result = json.loads(run_rest_command(
+                '/project/{0}/command/{1}'.format(u(self.project), u(job_id))))
+            status = result['status']
+        if not quiet: sys.stderr.write('\n')
+        if status == 'FAILED':
+            err = []
+            for msg in result['messages']:
+                match = re.match(r'Variables do not exist in (.*) and creating new variables is disabled: (.*)', msg['msg'])
+                if match:
+                    err.append("variable(s) {0} do not exist in table {1}".format(match.groups()[1], match.groups()[0]))
+            if err:
+                err.append("make sure the first row of the .csv file is a header row.")
+                raise OpalUploadError(', '.join(err))
+
+            raise Exception('Import job failed: {0}\nJob messages:\n{1}'.format(
+                self.name, '\n'.join('* '+m['msg'].strip() for m in result['messages'])))
 
     def do_remove_uploaded(self):
         # opal file -o <url> -u administrator -p password --delete /data_import/sample.csv
