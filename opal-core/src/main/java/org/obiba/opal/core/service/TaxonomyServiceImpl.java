@@ -10,41 +10,54 @@
 
 package org.obiba.opal.core.service;
 
-import java.util.ArrayList;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotNull;
 
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
+import org.obiba.opal.core.cfg.NoSuchTaxonomyException;
 import org.obiba.opal.core.cfg.TaxonomyService;
-import org.obiba.opal.core.domain.HasUniqueProperties;
 import org.obiba.opal.core.domain.taxonomy.Taxonomy;
 import org.obiba.opal.core.domain.taxonomy.Vocabulary;
+import org.obiba.opal.core.runtime.OpalRuntime;
+import org.obiba.opal.core.support.yaml.TaxonomyYaml;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.google.common.base.Function;
-import com.google.common.base.Objects;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-
-import static com.google.common.collect.Iterables.filter;
-import static com.google.common.collect.Iterables.transform;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 @Component
 public class TaxonomyServiceImpl implements TaxonomyService {
 
   @Autowired
-  private OrientDbService orientDbService;
+  private OpalRuntime opalRuntime;
+
+  private static final Logger log = LoggerFactory.getLogger(TaxonomyServiceImpl.class);
+
+  private static final String OBIBA_USER = "obiba";
+
+  private static final String MLSTRM_USER = "maelstrom-research";
+
+  private static final String TAXONOMY_YAML = "taxonomy.yml";
+
+  private static final String GITHUB_URL = "https://raw.githubusercontent.com";
+
+  private final List<Taxonomy> taxonomies = Lists.newArrayList();
 
   @Override
   @PostConstruct
   public void start() {
-    orientDbService.createUniqueIndex(Taxonomy.class);
-    orientDbService.createUniqueIndex(Vocabulary.class);
+    importDefault(false);
   }
 
   @Override
@@ -52,131 +65,162 @@ public class TaxonomyServiceImpl implements TaxonomyService {
   }
 
   @Override
+  public void importDefault() {
+    importDefault(true);
+  }
+
+  @Override
+  public Taxonomy importGitHubTaxonomy(@NotNull String username, @NotNull String repo, @Nullable String ref,
+      @NotNull String taxonomyFile) {
+    return importGitHubTaxonomy(username, repo, ref, taxonomyFile, true);
+  }
+
+  @Override
+  public Taxonomy importFileTaxonomy(@NotNull String file) throws FileSystemException {
+    FileObject fileObj = resolveFileInFileSystem(file);
+
+    try {
+      InputStream input = fileObj.getContent().getInputStream();
+      TaxonomyYaml yaml = new TaxonomyYaml();
+      Taxonomy taxonomy = yaml.load(input);
+      saveTaxonomy(taxonomy);
+      return taxonomy;
+    } catch(Exception e) {
+      log.error("Failed loading taxonomy from: " + file, e);
+    }
+
+    return null;
+  }
+
+  @Override
   public Iterable<Taxonomy> getTaxonomies() {
-    return orientDbService.list(Taxonomy.class);
+    Collections.sort(taxonomies, new Comparator<Taxonomy>() {
+
+      @Override
+      public int compare(Taxonomy t1, Taxonomy t2) {
+        return t1.getName().compareTo(t2.getName());
+      }
+
+    });
+    return taxonomies;
+  }
+
+  @Override
+  public boolean hasTaxonomy(@NotNull String name) {
+    for(Taxonomy taxonomy : taxonomies) {
+      if(taxonomy.getName().equals(name)) return true;
+    }
+    return false;
   }
 
   @Nullable
   @Override
   public Taxonomy getTaxonomy(@NotNull String name) {
-    return orientDbService.findUnique(new Taxonomy(name));
+    for(Taxonomy taxonomy : taxonomies) {
+      if(taxonomy.getName().equals(name)) return taxonomy;
+    }
+    return null;
   }
 
   @Override
-  public void saveTaxonomy(@Nullable Taxonomy template, @NotNull final Taxonomy taxonomy) {
-
-    // create new vocabularies
-    Iterable<Vocabulary> vocabularies = null;
-    if(taxonomy.hasVocabularies()) {
-      vocabularies = filter(transform(taxonomy.getVocabularies(), new Function<String, Vocabulary>() {
-        @Nullable
-        @Override
-        public Vocabulary apply(String vocabularyName) {
-          Vocabulary vocabulary = getVocabulary(taxonomy.getName(), vocabularyName);
-          if(vocabulary == null) {
-            return new Vocabulary(taxonomy.getName(), vocabularyName);
-          }
-          return null;
-        }
-      }), Predicates.notNull());
-    }
-
-    // delete removed vocabularies
-    Iterable<Vocabulary> deletedVocabularies = null;
-    if(template != null) {
-      Taxonomy previousTaxonomy = orientDbService.findUnique(template);
-      if(previousTaxonomy != null && previousTaxonomy.hasVocabularies()) {
-        deletedVocabularies = filter(transform(previousTaxonomy.getVocabularies(), new Function<String, Vocabulary>() {
-          @Nullable
-          @Override
-          public Vocabulary apply(String vocabularyName) {
-            return taxonomy.hasVocabulary(vocabularyName) ? null : getVocabulary(taxonomy.getName(), vocabularyName);
-          }
-        }), Predicates.notNull());
-      }
-    }
-
-    Map<HasUniqueProperties, HasUniqueProperties> toSave = Maps.newHashMap();
-    toSave.put(template == null ? taxonomy : template, taxonomy);
-    if(vocabularies != null) {
-      for(Vocabulary vocabulary : vocabularies) {
-        toSave.put(vocabulary, vocabulary);
-      }
-    }
-
-    // TODO we should execute these steps in a single transaction
-    orientDbService.save(toSave);
-    if(deletedVocabularies != null) {
-      orientDbService.delete(Iterables.toArray(deletedVocabularies, Vocabulary.class));
+  public void saveTaxonomy(@NotNull final Taxonomy taxonomy) {
+    Taxonomy stored = getTaxonomy(taxonomy.getName());
+    if(stored == null) taxonomies.add(taxonomy);
+    else {
+      int idx = taxonomies.indexOf(stored);
+      taxonomies.set(idx, taxonomy);
     }
   }
 
   @Override
   public void deleteTaxonomy(@NotNull String name) {
-
     Taxonomy taxonomy = getTaxonomy(name);
-    if(taxonomy == null) return;
-
-    Iterable<Vocabulary> vocabularies = getVocabularies(name);
-
-    List<HasUniqueProperties> toDelete = new ArrayList<>();
-    toDelete.add(new Taxonomy(name));
-    Iterables.addAll(toDelete, vocabularies);
-    orientDbService.delete(toDelete.toArray(new HasUniqueProperties[toDelete.size()]));
+    if(taxonomy != null) taxonomies.remove(taxonomy);
   }
 
   @Override
-  public Iterable<Vocabulary> getVocabularies(@NotNull String taxonomy) {
-    return orientDbService
-        .list(Vocabulary.class, "select from " + Vocabulary.class.getSimpleName() + " where taxonomy = ?", taxonomy);
-  }
-
-  @Nullable
-  @Override
-  public Vocabulary getVocabulary(@NotNull String taxonomy, @NotNull String name) {
-    return orientDbService.findUnique(new Vocabulary(taxonomy, name));
+  public Iterable<Vocabulary> getVocabularies(@NotNull String name) {
+    Taxonomy taxonomy = getTaxonomy(name);
+    if(taxonomy == null) throw new NoSuchTaxonomyException(name);
+    return taxonomy.getVocabularies();
   }
 
   @Override
-  public void saveVocabulary(@Nullable Vocabulary template, @NotNull Vocabulary vocabulary) {
-    Taxonomy previousTaxonomy = template == null ? null : getTaxonomy(template.getTaxonomy());
-    Taxonomy taxonomy = getTaxonomy(vocabulary.getTaxonomy());
-    if(taxonomy == null) {
-      throw new IllegalArgumentException(
-          "Cannot create vocabulary for non-existing taxonomy " + vocabulary.getTaxonomy());
-    }
+  public boolean hasVocabulary(@NotNull String taxonomyName, @NotNull String vocabularyName)
+      throws NoSuchTaxonomyException {
+    Taxonomy taxonomy = getTaxonomy(taxonomyName);
+    if(taxonomy == null) throw new NoSuchTaxonomyException(taxonomyName);
+    return taxonomy.hasVocabulary(vocabularyName);
+  }
 
-    Map<HasUniqueProperties, HasUniqueProperties> toSave = Maps.newHashMap();
-    toSave.put(template == null ? vocabulary : template, vocabulary);
-    if(Objects.equal(previousTaxonomy, taxonomy)) {
-      if(template != null && !template.getName().equals(vocabulary.getName())) {
-        taxonomy.renameVocabulary(template.getName(), vocabulary.getName());
-        toSave.put(taxonomy, taxonomy);
+  @Override
+  public Vocabulary getVocabulary(@NotNull String taxonomyName, @NotNull String vocabularyName) {
+    Taxonomy taxonomy = getTaxonomy(taxonomyName);
+    if(taxonomy == null) throw new NoSuchTaxonomyException(taxonomyName);
+    return taxonomy.getVocabulary(vocabularyName);
+  }
+
+  @Override
+  public void saveVocabulary(@Nullable String taxonomyName, @NotNull Vocabulary vocabulary) {
+    Taxonomy taxonomy = getTaxonomy(taxonomyName);
+    if(taxonomy == null) throw new NoSuchTaxonomyException(taxonomyName);
+    taxonomy.addVocabulary(vocabulary);
+  }
+
+  @Override
+  public void deleteVocabulary(@Nullable String taxonomyName, @NotNull String vocabularyName) {
+    Taxonomy taxonomy = getTaxonomy(taxonomyName);
+    if(taxonomy == null) throw new NoSuchTaxonomyException(taxonomyName);
+    taxonomy.removeVocabulary(vocabularyName);
+  }
+
+  //
+  // Private methods
+  //
+
+  private void importDefault(boolean override) {
+    importGitHubTaxonomy(MLSTRM_USER, "maelstrom-taxonomies", null, "area-of-information", override);
+    importGitHubTaxonomy(MLSTRM_USER, "maelstrom-taxonomies", null, "harmonization", override);
+    importGitHubTaxonomy(OBIBA_USER, "obiba-taxonomies", null, "default", override);
+    importGitHubTaxonomy(OBIBA_USER, "obiba-taxonomies", null, "onyx", override);
+  }
+
+  private Taxonomy importGitHubTaxonomy(@NotNull String username, @NotNull String repo, @Nullable String ref,
+      @NotNull String taxonomyFile, boolean override) {
+    String user = username;
+    if(Strings.isNullOrEmpty(username)) user = MLSTRM_USER;
+    if(Strings.isNullOrEmpty(repo)) throw new IllegalArgumentException("GitHub repository is required");
+    String reference = ref;
+    if(Strings.isNullOrEmpty(ref)) reference = "master";
+    String fileName = taxonomyFile;
+    if(Strings.isNullOrEmpty(taxonomyFile)) fileName = TAXONOMY_YAML;
+    if(!fileName.endsWith(".yml")) fileName = taxonomyFile + "/" + TAXONOMY_YAML;
+
+    String uri = GITHUB_URL + "/" + user + "/" + repo + "/" + reference + "/" + fileName;
+
+    try {
+      InputStream input = new URL(uri).openStream();
+      TaxonomyYaml yaml = new TaxonomyYaml();
+      Taxonomy taxonomy = yaml.load(input);
+      if(override || !hasTaxonomy(taxonomy.getName())) {
+        saveTaxonomy(taxonomy);
+        return taxonomy;
       }
-    } else {
-      taxonomy.addVocabulary(vocabulary.getName());
-      toSave.put(taxonomy, taxonomy);
-      if(previousTaxonomy != null) {
-        previousTaxonomy.removeVocabulary(template.getName());
-        toSave.put(previousTaxonomy, previousTaxonomy);
-      }
+    } catch(Exception e) {
+      log.error("Failed loading taxonomy from: " + uri, e);
     }
-    orientDbService.save(toSave);
+    return null;
   }
 
-  @Override
-  public void deleteVocabulary(@NotNull Vocabulary vocabulary) {
-    Taxonomy taxonomy = getTaxonomy(vocabulary.getTaxonomy());
-    if(taxonomy == null) {
-      throw new IllegalArgumentException(
-          "Cannot delete vocabulary for non-existing taxonomy " + vocabulary.getTaxonomy());
-    }
+  private FileObject resolveFileInFileSystem(String path) throws FileSystemException {
+    return opalRuntime.getFileSystem().getRoot().resolveFile(path);
+  }
 
-    taxonomy.removeVocabulary(vocabulary.getName());
-
-    // TODO we should execute these steps in a single transaction
-    orientDbService.delete(vocabulary);
-    orientDbService.save(taxonomy, taxonomy);
+  /**
+   * For testing.
+   */
+  void clear() {
+    taxonomies.clear();
   }
 
 }

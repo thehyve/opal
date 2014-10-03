@@ -2,24 +2,21 @@ package org.obiba.opal.web.gwt.app.client.administration.taxonomies.list;
 
 import org.obiba.opal.web.gwt.app.client.i18n.Translations;
 import org.obiba.opal.web.gwt.app.client.js.JsArrays;
-import org.obiba.opal.web.gwt.app.client.ui.LocalizedLabel;
-import org.obiba.opal.web.model.client.opal.TaxonomyDto;
+import org.obiba.opal.web.model.client.opal.LocaleTextDto;
+import org.obiba.opal.web.model.client.opal.TaxonomiesDto;
 
-import com.github.gwtbootstrap.client.ui.Breadcrumbs;
-import com.github.gwtbootstrap.client.ui.Heading;
+import com.github.gwtbootstrap.client.ui.DropdownButton;
 import com.github.gwtbootstrap.client.ui.NavLink;
-import com.github.gwtbootstrap.client.ui.base.IconAnchor;
-import com.github.gwtbootstrap.client.ui.constants.IconType;
+import com.github.gwtbootstrap.client.ui.NavList;
+import com.github.gwtbootstrap.client.ui.NavWidget;
 import com.google.gwt.core.client.JsArray;
-import com.google.gwt.core.client.JsArrayString;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
-import com.google.gwt.user.client.ui.FlowPanel;
-import com.google.gwt.user.client.ui.HasWidgets;
-import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.IsWidget;
+import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.google.inject.Inject;
 import com.gwtplatform.mvp.client.ViewWithUiHandlers;
@@ -31,116 +28,90 @@ public class TaxonomiesView extends ViewWithUiHandlers<TaxonomiesUiHandlers> imp
   interface ViewUiBinder extends UiBinder<Widget, TaxonomiesView> {}
 
   @UiField
-  FlowPanel panel;
+  DropdownButton addBtn;
 
   @UiField
-  Breadcrumbs breadcrumbs;
+  ScrollPanel taxonomyDetailsPanel;
 
-  private JsArray<TaxonomyDto> taxonomies;
+  @UiField
+  NavList taxonomyList;
 
   @Inject
   public TaxonomiesView(ViewUiBinder viewUiBinder, Translations translations) {
     this.translations = translations;
     initWidget(viewUiBinder.createAndBindUi(this));
+    addBtn.setText(translations.addTaxonomy());
   }
 
   @Override
-  public HasWidgets getBreadcrumbs() {
-    return breadcrumbs;
+  public void setInSlot(Object slot, IsWidget content) {
+    taxonomyDetailsPanel.clear();
+    taxonomyDetailsPanel.add(content);
   }
 
   @Override
-  public void setTaxonomies(JsArray<TaxonomyDto> taxonomies) {
-    this.taxonomies = taxonomies;
-    if(taxonomies.length() == 0) {
-      panel.clear();
-    } else {
-      redraw();
+  public void setTaxonomies(JsArray<TaxonomiesDto.TaxonomySummaryDto> taxonomies) {
+    taxonomyList.clear();
+    TaxonomiesDto.TaxonomySummaryDto first = null;
+    for(TaxonomiesDto.TaxonomySummaryDto taxonomy : JsArrays.toIterable(taxonomies)) {
+
+      NavLink link = new NavLink(taxonomy.getName());
+      link.setTitle(asText(taxonomy.getTitleArray()));
+      link.addClickHandler(new TaxonomyClickHandler(taxonomy, link));
+      taxonomyList.add(link);
+      if(first == null) {
+        first = taxonomy;
+        link.setActive(true);
+        getUiHandlers().onTaxonomySelection(first);
+      }
     }
+
   }
 
-  @UiHandler("add")
+  private String asText(JsArray<LocaleTextDto> texts) {
+    StringBuilder builder = new StringBuilder();
+    for(LocaleTextDto text : JsArrays.toIterable(texts)) {
+      builder.append("[").append(text.getLocale()).append("] ").append(text.getText()).append("\n");
+    }
+    return builder.toString();
+  }
+
+  @UiHandler("addTaxonomy")
   void onShowAddTaxonomy(ClickEvent event) {
     getUiHandlers().onAddTaxonomy();
   }
 
-  private void redraw() {
-    panel.clear();
-    for(TaxonomyDto taxonomy : JsArrays.toIterable(taxonomies)) {
-      FlowPanel panelTaxonomy = new FlowPanel();
-      panelTaxonomy.addStyleName("item");
+  @UiHandler("importDefault")
+  void onImportDefaultTaxonomies(ClickEvent event) {
+    getUiHandlers().onImportDefaultTaxonomies();
+  }
 
-      Widget taxonomyLink = newTaxonomyLink(getUiHandlers(), taxonomy);
-      panelTaxonomy.add(taxonomyLink);
 
-      for(int i = 0; i < taxonomy.getDescriptionsCount(); i++) {
-        if(!taxonomy.getDescriptions(i).getText().isEmpty()) {
-          panelTaxonomy
-              .add(new LocalizedLabel(taxonomy.getDescriptions(i).getLocale(), taxonomy.getDescriptions(i).getText()));
+  private class TaxonomyClickHandler implements ClickHandler {
+
+    private final TaxonomiesDto.TaxonomySummaryDto taxonomy;
+
+    private final NavLink link;
+
+    TaxonomyClickHandler(TaxonomiesDto.TaxonomySummaryDto taxonomy, NavLink link) {
+      this.taxonomy = taxonomy;
+      this.link = link;
+    }
+
+    @Override
+    public void onClick(ClickEvent event) {
+      unActivateLinks();
+      link.setActive(true);
+      getUiHandlers().onTaxonomySelection(taxonomy);
+    }
+
+    private void unActivateLinks() {
+      int widgetCount = taxonomyList.getWidgetCount();
+      for(int i = 0; i < widgetCount; i++) {
+        if(taxonomyList.getWidget(i) instanceof NavLink) {
+          ((NavWidget) taxonomyList.getWidget(i)).setActive(false);
         }
       }
-
-      redrawVocabularies(taxonomy, panelTaxonomy);
-
-      panel.add(panelTaxonomy);
     }
   }
-
-  private void redrawVocabularies(TaxonomyDto taxonomy, FlowPanel panelTaxonomy) {
-    JsArrayString vocabularies = JsArrays.toSafeArray(taxonomy.getVocabulariesArray());
-    if(vocabularies.length() > 0) {
-      panelTaxonomy.add(new Heading(5, translations.vocabulariesLabel()));
-      FlowPanel vocabulariesPanel = new FlowPanel();
-      for(int i = 0; i < vocabularies.length(); i++) {
-        vocabulariesPanel.add(getVocabularyLink(getUiHandlers(), taxonomy, vocabularies.get(i)));
-      }
-      panelTaxonomy.add(vocabulariesPanel);
-    }
-  }
-
-  protected Widget newTaxonomyLink(final TaxonomiesUiHandlers handlers, final TaxonomyDto taxonomy) {
-    FlowPanel titlePanel = new FlowPanel();
-    Label taxonomyTitle = new Label(taxonomy.getName());
-    taxonomyTitle.addStyleName("inline-block");
-    taxonomyTitle.setTitle(taxonomy.getName());
-    taxonomyTitle.addClickHandler(new ClickHandler() {
-      @Override
-      public void onClick(ClickEvent clickEvent) {
-        handlers.onTaxonomySelection(taxonomy);
-      }
-    });
-
-    titlePanel.add(taxonomyTitle);
-    IconAnchor edit = new IconAnchor();
-    edit.setIcon(IconType.EDIT);
-    edit.addStyleName("small-dual-indent");
-    edit.addClickHandler(new ClickHandler() {
-      @Override
-      public void onClick(ClickEvent clickEvent) {
-        handlers.onTaxonomyEdit(taxonomy);
-      }
-    });
-
-    titlePanel.add(edit);
-
-    Heading head = new Heading(4);
-    head.addStyleName("inline-block small-right-indent");
-    head.add(titlePanel);
-    return head;
-  }
-
-  private Widget getVocabularyLink(final TaxonomiesUiHandlers uiHandlers, final TaxonomyDto taxonomy,
-      final String vocabulary) {
-    NavLink link = new NavLink(vocabulary);
-//    link.setIcon(IconType.TAG);
-    link.addStyleName("small-dual-indent");
-    link.addClickHandler(new ClickHandler() {
-      @Override
-      public void onClick(ClickEvent clickEvent) {
-        uiHandlers.onVocabularySelection(taxonomy.getName(), vocabulary);
-      }
-    });
-    return link;
-  }
-
 }

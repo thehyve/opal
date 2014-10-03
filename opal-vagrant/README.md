@@ -146,3 +146,31 @@ To update opal, we just need to run in the guest VM:
     sudo yum update opal-server
 
 A restart on the Opal service will be needed after an upgrade
+
+---
+
+# Installing R tools using Puppet
+
+We have a Puppet module to automate the installation of opal-r and rserver.
+To use it, run the steps in section 'Provisioning using Puppet', and...
+
+1 - In the folder containing subfolders manifests, modules and files, run
+
+    sudo puppet apply --modulepath=modules -e "include opal-rtools"
+
+2 - launch rserver by running
+
+    sudo service rserver start
+    
+
+To check if R server admin is running properly, execute
+
+    curl http://localhost:6312/rserver
+    
+And the result should be 
+    
+    {"running":true,"encoding":"native","port":6311}
+
+You can also check it in the Opal UI, in menu 'Administration', then 'R', 'Test Connection with R'
+
+PS: This puppet module is oncoifmed to work with RedHat, but there are still some issues to solve in CentOS

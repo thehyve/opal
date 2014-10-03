@@ -26,6 +26,7 @@ import org.obiba.opal.web.model.client.magma.VariableDto;
 import com.github.gwtbootstrap.client.ui.Icon;
 import com.github.gwtbootstrap.client.ui.constants.IconSize;
 import com.github.gwtbootstrap.client.ui.constants.IconType;
+import com.google.common.base.Strings;
 import com.google.gwt.cell.client.AbstractSafeHtmlCell;
 import com.google.gwt.cell.client.FieldUpdater;
 import com.google.gwt.cell.client.ValueUpdater;
@@ -50,6 +51,7 @@ import com.google.gwt.user.cellview.client.Column;
 import com.google.gwt.user.cellview.client.TextColumn;
 import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.Widget;
 import com.google.gwt.view.client.ListDataProvider;
 import com.google.inject.Inject;
@@ -76,6 +78,9 @@ public class EntityModalView extends ModalPopupViewWithUiHandlers<EntityModalUiH
 
   @UiField
   Label entityId;
+
+  @UiField
+  Panel valuesPanel;
 
   @UiField
   CellTable<EntityModalPresenter.VariableValueRow> table;
@@ -141,8 +146,11 @@ public class EntityModalView extends ModalPopupViewWithUiHandlers<EntityModalUiH
   @Override
   public void setTables(JsArray<TableDto> tables, TableDto selectedTable) {
     clear();
-    tableChooser.addTableSelections(tables);
-    tableChooser.selectTable(selectedTable);
+    valuesPanel.setVisible(tables.length() > 0);
+    if(tables.length() > 0) {
+      tableChooser.addTableSelections(tables);
+      tableChooser.selectTable(selectedTable);
+    }
   }
 
   @Override
@@ -252,6 +260,9 @@ public class EntityModalView extends ModalPopupViewWithUiHandlers<EntityModalUiH
         valueViewHandler.requestBinaryValueView(variable);
       } else if(variable.getValueType().matches("point|linestring|polygon")) {
         valueViewHandler.requestGeoValueView(variable, variableValueRow.getValueDto());
+      } else if("text".equalsIgnoreCase(variable.getValueType()) &&
+          !Strings.isNullOrEmpty(variable.getReferencedEntityType())) {
+        valueViewHandler.requestEntityView(variable, variableValueRow.getValueDto());
       }
     }
   }
@@ -287,11 +298,15 @@ public class EntityModalView extends ModalPopupViewWithUiHandlers<EntityModalUiH
           if(object.getVariableDto().getIsRepeatable()) {
             return renderLink(valueStr, IconType.LIST);
           }
-          if(object.getVariableDto().getValueType().compareToIgnoreCase("binary") == 0) {
+          if(object.getVariableDto().getValueType().equalsIgnoreCase("binary")) {
             return renderLink(valueStr, IconType.DOWNLOAD);
           }
           if(object.getVariableDto().getValueType().matches("point|linestring|polygon")) {
             return renderLink(valueStr, IconType.MAP_MARKER);
+          }
+          if(object.getVariableDto().getValueType().equalsIgnoreCase("text") &&
+              !Strings.isNullOrEmpty(object.getVariableDto().getReferencedEntityType())) {
+            return renderLink(valueStr, IconType.ELLIPSIS_VERTICAL);
           }
           return SimpleSafeHtmlRenderer.getInstance().render(valueStr);
         }
