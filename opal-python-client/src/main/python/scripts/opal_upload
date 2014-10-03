@@ -158,7 +158,6 @@ class OpalFile:
         logging.info('finished processing {0} in {1:.3f} seconds'.format(self.name, time.time() - start_time))
 
     def update(self):
-        self.check_csv_id_header()
         self.do_upload()
         try:
             self.do_import()
@@ -200,13 +199,6 @@ class OpalFile:
                 raise OpalUploadError("No column named 'id' found in csv file '{1}'".format(self.path))
             for l in reader:
                 yield l['id']
-
-    def check_csv_id_header(self):
-        with open(self.path) as f:
-            headers = csv.reader(f).next()
-            if not headers[0] == 'id':
-                raise OpalUploadError(
-                    "First colunn not named 'id' in {0}, found: ".format(self.path) + ','.join(headers))
 
     def replace(self):
         self.do_upload()
