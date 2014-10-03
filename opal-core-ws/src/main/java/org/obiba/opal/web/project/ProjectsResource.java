@@ -22,6 +22,7 @@ import javax.ws.rs.core.UriInfo;
 import org.obiba.magma.NoSuchDatasourceException;
 import org.obiba.opal.core.domain.Project;
 import org.obiba.opal.core.security.OpalPermissions;
+import org.obiba.opal.core.service.EntityValidationService;
 import org.obiba.opal.core.service.ProjectService;
 import org.obiba.opal.web.model.Opal;
 import org.obiba.opal.web.model.Projects;
@@ -39,6 +40,9 @@ public class ProjectsResource {
 
   @Autowired
   private ProjectService projectService;
+
+  @Autowired
+  private EntityValidationService validationService;
 
   @GET
   @Transactional(readOnly = true)
@@ -58,6 +62,9 @@ public class ProjectsResource {
   @POST
   public Response createProject(@Context UriInfo uriInfo, Projects.ProjectFactoryDto projectFactoryDto) {
     Project project = Dtos.fromDto(projectFactoryDto);
+
+    validationService.validate(project);
+
     projectService.save(project);
     URI projectUri = uriInfo.getBaseUriBuilder().path("project").path(project.getName()).build();
     return Response.created(projectUri)

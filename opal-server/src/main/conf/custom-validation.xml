@@ -1,0 +1,18 @@
+<constraint-mappings
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://jboss.org/xml/ns/javax/validation/mapping validation-mapping-1.1.xsd"
+        xmlns="http://jboss.org/xml/ns/javax/validation/mapping" version="1.1">
+
+    <bean class="org.obiba.opal.core.domain.Project" ignore-annotations="true">
+        <field name="name">
+            <constraint annotation="org.obiba.opal.core.validator.ExtendedAlphaNumeric"/>
+        </field>
+    </bean>
+
+    <bean class="org.obiba.opal.web.model.Magma$TableDto" ignore-annotations="true">
+        <getter name="name">
+            <constraint annotation="org.obiba.opal.core.validator.ExtendedAlphaNumeric"/>
+        </getter>
+    </bean>
+
+</constraint-mappings>

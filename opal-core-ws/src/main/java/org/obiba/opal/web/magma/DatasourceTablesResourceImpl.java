@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 
 import javax.annotation.Nullable;
+import javax.validation.ValidationException;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -43,6 +44,7 @@ import org.obiba.magma.support.DatasourceCopier;
 import org.obiba.magma.support.Disposables;
 import org.obiba.magma.views.ViewManager;
 import org.obiba.opal.core.security.OpalPermissions;
+import org.obiba.opal.core.service.EntityValidationService;
 import org.obiba.opal.web.TimestampedResponses;
 import org.obiba.opal.web.model.Magma;
 import org.obiba.opal.web.model.Magma.TableDto;
@@ -73,6 +75,9 @@ public class DatasourceTablesResourceImpl implements AbstractTablesResource, Dat
   private ViewManager viewManager;
 
   private Set<ValueTableUpdateListener> tableListeners;
+
+  @Autowired
+  private EntityValidationService entityValidationService;
 
   @Override
   public void setDatasource(Datasource datasource) {
@@ -144,7 +149,7 @@ public class DatasourceTablesResourceImpl implements AbstractTablesResource, Dat
   @Produces("application/vnd.ms-excel")
   @AuthorizeResource
   @AuthenticatedByCookie
-  public Response getExcelDictionary(List<String> tables) throws MagmaRuntimeException, IOException {
+  public Response getExcelDictionary(List<String> tables) throws MagmaRuntimeException, IOException, ValidationException {
     String destinationName = datasource.getName() + "-dictionary";
     ByteArrayOutputStream excelOutput = new ByteArrayOutputStream();
     Datasource destinationDatasource = new ExcelDatasource(destinationName, excelOutput);
@@ -190,6 +195,9 @@ public class DatasourceTablesResourceImpl implements AbstractTablesResource, Dat
       return Response.status(Status.BAD_REQUEST)
           .entity(ClientErrorDtos.getErrorMessage(Status.BAD_REQUEST, "TableAlreadyExists").build()).build();
     }
+
+    entityValidationService.validate(table);
+
     writeVariablesToTable(table);
     URI tableUri = UriBuilder.fromPath("/").path(DatasourceResource.class).path(DatasourceResource.class, "getTable")
         .build(datasource.getName(), table.getName());
