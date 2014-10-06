@@ -20,11 +20,6 @@ verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
 
 
-# This exception indicates that this is a known error condition handled by the code, so no need to print stacktraces
-# and such.
-class OpalUploadError (Exception):
-    pass
-
 ## Parse config file ##
 
 CONFIGFILE = expanduser('~/.opal/fileupload.conf')
@@ -104,8 +99,13 @@ MAX_URL_SIZE = 2000
 
 
 def u(it):
+    """url-encode string/unicode"""
     return quote_plus(str(it))
 
+# This exception indicates that this is a known error condition handled by the code, so no need to print stacktraces
+# and such.
+class OpalUploadError (Exception):
+    pass
 
 class OpalFile:
 
