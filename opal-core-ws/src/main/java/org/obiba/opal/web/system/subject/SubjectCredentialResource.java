@@ -16,13 +16,17 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
+import org.obiba.opal.core.domain.security.Group;
 import org.obiba.opal.core.domain.security.SubjectCredentials;
+import org.obiba.opal.core.service.EntityValidationService;
 import org.obiba.opal.core.service.security.SubjectCredentialsService;
 import org.obiba.opal.web.model.Opal;
 import org.obiba.opal.web.security.Dtos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 @Component
 @Scope("request")
@@ -34,6 +38,9 @@ public class SubjectCredentialResource {
 
   @Autowired
   private SubjectCredentialsService subjectCredentialsService;
+
+  @Autowired
+  private EntityValidationService entityValidationService;
 
   @GET
   public Response get() {
@@ -50,8 +57,10 @@ public class SubjectCredentialResource {
     }
     if (getSubjectCredentials() == null) return Response.status(Response.Status.NOT_FOUND).build();
 
-    SubjectCredentials subjectCredentials = Dtos.fromDto(dto);
-    switch(subjectCredentials.getAuthenticationType()) {
+      SubjectCredentials subjectCredentials = Dtos.fromDto(dto);
+      validateGroups(subjectCredentials);
+
+      switch(subjectCredentials.getAuthenticationType()) {
       case PASSWORD:
         if(dto.hasPassword() && !dto.getPassword().isEmpty()) {
           subjectCredentials.setPassword(subjectCredentialsService.hashPassword(dto.getPassword()));
@@ -80,4 +89,14 @@ public class SubjectCredentialResource {
   private SubjectCredentials getSubjectCredentials() {
     return subjectCredentialsService.getSubjectCredentials(name);
   }
+
+    private void validateGroups(SubjectCredentials user) {
+
+        Set<String> groupNames =  user.getGroups();
+        for (String groupName: groupNames) {
+            Group group = new Group(groupName);
+            entityValidationService.validate(group);
+        }
+    }
+
 }

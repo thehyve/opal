@@ -10,6 +10,7 @@
 package org.obiba.opal.web.system.subject;
 
 import java.util.List;
+import java.util.Set;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
@@ -20,7 +21,9 @@ import javax.ws.rs.core.Response;
 
 import org.hibernate.validator.internal.engine.ConstraintViolationImpl;
 import org.hibernate.validator.internal.engine.path.PathImpl;
+import org.obiba.opal.core.domain.security.Group;
 import org.obiba.opal.core.domain.security.SubjectCredentials;
+import org.obiba.opal.core.service.EntityValidationService;
 import org.obiba.opal.core.service.security.SubjectCredentialsService;
 import org.obiba.opal.web.model.Opal;
 import org.obiba.opal.web.security.Dtos;
@@ -38,6 +41,9 @@ public class SubjectCredentialsResource {
 
   @Autowired
   private SubjectCredentialsService subjectCredentialsService;
+
+  @Autowired
+  private EntityValidationService entityValidationService;
 
   @GET
   public List<Opal.SubjectCredentialsDto> getAll() {
@@ -61,6 +67,9 @@ public class SubjectCredentialsResource {
       throw new ConstraintViolationException(ImmutableSet.of(violation));
     }
 
+    entityValidationService.validate(subjectCredentials);
+    validateGroups(subjectCredentials);
+
     switch(subjectCredentials.getAuthenticationType()) {
       case PASSWORD:
         if(dto.hasPassword()) {
@@ -82,4 +91,13 @@ public class SubjectCredentialsResource {
     subjectCredentialsService.save(subjectCredentials);
     return Response.ok().build();
   }
+
+    private void validateGroups(SubjectCredentials user) {
+
+        Set<String> groupNames =  user.getGroups();
+        for (String groupName: groupNames) {
+            Group group = new Group(groupName);
+            entityValidationService.validate(group);
+        }
+    }
 }

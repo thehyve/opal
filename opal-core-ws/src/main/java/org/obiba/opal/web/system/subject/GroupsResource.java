@@ -21,6 +21,7 @@ import javax.ws.rs.core.Response;
 import org.hibernate.validator.internal.engine.ConstraintViolationImpl;
 import org.hibernate.validator.internal.engine.path.PathImpl;
 import org.obiba.opal.core.domain.security.Group;
+import org.obiba.opal.core.service.EntityValidationService;
 import org.obiba.opal.core.service.security.SubjectCredentialsService;
 import org.obiba.opal.web.model.Opal;
 import org.obiba.opal.web.security.Dtos;
@@ -38,6 +39,9 @@ public class GroupsResource {
 
   @Autowired
   private SubjectCredentialsService subjectCredentialsService;
+
+  @Autowired
+  private EntityValidationService entityValidationService;
 
   @GET
   public List<Opal.GroupDto> getGroups() {
@@ -59,6 +63,9 @@ public class GroupsResource {
               group, group, PathImpl.createPathFromString("name"), null, null);
       throw new ConstraintViolationException(ImmutableSet.of(violation));
     }
+
+    entityValidationService.validate(group);
+
     subjectCredentialsService.createGroup(dto.getName());
     return Response.ok().build();
   }

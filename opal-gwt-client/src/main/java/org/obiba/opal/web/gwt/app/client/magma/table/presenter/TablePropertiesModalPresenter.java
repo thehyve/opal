@@ -9,14 +9,22 @@
  */
 package org.obiba.opal.web.gwt.app.client.magma.table.presenter;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import javax.annotation.Nullable;
-
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.JsonUtils;
+import com.google.gwt.http.client.Request;
+import com.google.gwt.http.client.Response;
+import com.google.gwt.user.client.ui.HasText;
+import com.google.inject.Inject;
+import com.google.web.bindery.event.shared.EventBus;
+import com.gwtplatform.mvp.client.HasUiHandlers;
+import com.gwtplatform.mvp.client.PopupView;
+import com.gwtplatform.mvp.client.proxy.PlaceManager;
+import org.obiba.opal.web.gwt.app.client.i18n.TranslationMessages;
 import org.obiba.opal.web.gwt.app.client.i18n.Translations;
+import org.obiba.opal.web.gwt.app.client.js.JsArrays;
 import org.obiba.opal.web.gwt.app.client.presenter.ModalPresenterWidget;
 import org.obiba.opal.web.gwt.app.client.project.ProjectPlacesHelper;
+import org.obiba.opal.web.gwt.app.client.support.ClientErrorDtoMessageBuilder;
 import org.obiba.opal.web.gwt.app.client.validator.FieldValidator;
 import org.obiba.opal.web.gwt.app.client.validator.RequiredTextValidator;
 import org.obiba.opal.web.gwt.app.client.validator.ValidationHandler;
@@ -27,15 +35,11 @@ import org.obiba.opal.web.gwt.rest.client.UriBuilder;
 import org.obiba.opal.web.gwt.rest.client.UriBuilders;
 import org.obiba.opal.web.model.client.magma.DatasourceDto;
 import org.obiba.opal.web.model.client.magma.TableDto;
+import org.obiba.opal.web.model.client.ws.ClientErrorDto;
 
-import com.google.gwt.http.client.Request;
-import com.google.gwt.http.client.Response;
-import com.google.gwt.user.client.ui.HasText;
-import com.google.inject.Inject;
-import com.google.web.bindery.event.shared.EventBus;
-import com.gwtplatform.mvp.client.HasUiHandlers;
-import com.gwtplatform.mvp.client.PopupView;
-import com.gwtplatform.mvp.client.proxy.PlaceManager;
+import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  *
@@ -46,6 +50,8 @@ public class TablePropertiesModalPresenter extends ModalPresenterWidget<TablePro
   private final Translations translations;
 
   private final PlaceManager placeManager;
+
+  private static final TranslationMessages translationMessages = GWT.create(TranslationMessages.class);
 
   private String datasource;
 
@@ -184,7 +190,20 @@ public class TablePropertiesModalPresenter extends ModalPresenterWidget<TablePro
         getView().hide();
         onSuccess();
       } else {
-        getView().showError(response.getText(), null);
+          String msg;
+          try {
+              //we try to get a more accurate message if the response contains JSON
+              ClientErrorDto error = JsonUtils.unsafeEval(response.getText());
+              String defaultMessage= translationMessages
+                      .unknownResponse(error.getStatus(), String.valueOf(JsArrays.toList(error.getArgumentsArray())));
+
+              msg = ClientErrorDtoMessageBuilder.get(error).withdefaultMessage(defaultMessage).build();
+
+          } catch(IllegalArgumentException e) {
+              // response does not contain JSON, it is a simple server error
+              msg = response.getText();
+          }
+          getView().showError(msg, null);
       }
     }
 

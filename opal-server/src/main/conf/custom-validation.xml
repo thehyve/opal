@@ -9,6 +9,18 @@
         </field>
     </bean>
 
+    <bean class="org.obiba.opal.core.domain.security.Group" ignore-annotations="true">
+        <field name="name">
+            <constraint annotation="org.obiba.opal.core.validator.ExtendedAlphaNumeric"/>
+        </field>
+    </bean>
+
+    <bean class="org.obiba.opal.core.domain.security.SubjectCredentials" ignore-annotations="true">
+        <field name="name">
+            <constraint annotation="org.obiba.opal.core.validator.ExtendedAlphaNumeric"/>
+        </field>
+    </bean>
+
     <bean class="org.obiba.opal.web.model.Magma$TableDto" ignore-annotations="true">
         <getter name="name">
             <constraint annotation="org.obiba.opal.core.validator.ExtendedAlphaNumeric"/>

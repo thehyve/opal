@@ -10,5 +10,4 @@
     </property>
     <property name="location" value="file:${OPAL_HOME}/conf/opal-config.properties"/>
   </bean>
-
 </beans>

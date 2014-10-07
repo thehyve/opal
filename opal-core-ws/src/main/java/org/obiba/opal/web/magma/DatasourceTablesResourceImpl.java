@@ -177,7 +177,10 @@ public class DatasourceTablesResourceImpl implements AbstractTablesResource, Dat
   @Override
   @POST
   public Response createTable(final TableDto table) {
-    if(MagmaEngine.get().hasExtension(MagmaSecurityExtension.class)) {
+
+      entityValidationService.validate(table);
+
+      if(MagmaEngine.get().hasExtension(MagmaSecurityExtension.class)) {
       return MagmaEngine.get().getExtension(MagmaSecurityExtension.class).getAuthorizer()
           .silentSudo(new Callable<Response>() {
             @Override
@@ -195,8 +198,6 @@ public class DatasourceTablesResourceImpl implements AbstractTablesResource, Dat
       return Response.status(Status.BAD_REQUEST)
           .entity(ClientErrorDtos.getErrorMessage(Status.BAD_REQUEST, "TableAlreadyExists").build()).build();
     }
-
-    entityValidationService.validate(table);
 
     writeVariablesToTable(table);
     URI tableUri = UriBuilder.fromPath("/").path(DatasourceResource.class).path(DatasourceResource.class, "getTable")
