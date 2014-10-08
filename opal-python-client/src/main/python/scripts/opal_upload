@@ -2,7 +2,7 @@
 
 from __future__ import print_function, division
 
-import sys, os
+import sys, os, errno
 import re
 import logging
 import subprocess
@@ -168,37 +168,50 @@ class OpalFile:
     def delete(self):
         # Delete ids are sent as url parameters. Sending a too large url results in an error 413 FULL HEAD,
         # so we need to split large deletions up over several requests.
-        base_url = '/datasource/{0}/table/{1}/valueSets?'.format(u(self.project), u(self.table))
-        url = StringIO()
-        url.write(base_url)
-
-        def send():
-            # if no ids return
-            if url.len == len(base_url): return
-            # strip off last '&'
-            run_rest_command(url.getvalue()[:-1], method='DELETE')
-            self.schedule_reindex()
-            url.seek(0)
-            url.truncate()
+        with open(self.path) as idfile:
+            size = self.filesize(idfile)
+            base_url = '/datasource/{0}/table/{1}/valueSets?'.format(u(self.project), u(self.table))
+            url = StringIO()
             url.write(base_url)
-            if not quiet: sys.stderr.write('.')
 
-        if not quiet: sys.stderr.write('Deleting')
-        for id in self.delete_ids():
-            idstring = 'id='+u(id)
-            if url.len + len(idstring) > MAX_URL_SIZE:
-                send()
-            url.write(idstring+'&')
-        send()
-        if not quiet: sys.stderr.write('\n')
+            def send():
+                # if no ids, return
+                if url.len == len(base_url): return
+                # strip off last '&'
+                run_rest_command(url.getvalue()[:-1], method='DELETE')
+                self.schedule_reindex()
+                url.seek(0); url.truncate()
+                url.write(base_url)
+                if not quiet: sys.stderr.write('\rDeleting, {0:.0%} completed...'.format(idfile.tell() / size)
+                                               if size else '.')
 
-    def delete_ids(self):
-        with open(self.path) as f:
-            reader = csv.DictReader(f)
-            if not 'id' in reader.fieldnames:
-                raise OpalUploadError("No column named 'id' found in csv file '{1}'".format(self.path))
-            for l in reader:
-                yield l['id']
+            if not quiet and not size: sys.stderr.write('Deleting.')
+            for id in self.delete_ids(idfile):
+                idstring = 'id='+u(id)
+                if url.len + len(idstring) > MAX_URL_SIZE:
+                    send()
+                url.write(idstring+'&')
+            send()
+            if not quiet: sys.stderr.write('done\n')
+
+    def delete_ids(self, idfile):
+        reader = csv.reader(idfile)
+        # skip header
+        reader.next()
+        for l in reader:
+            yield l[0]
+
+    def filesize(self, file):
+        try:
+            curpos = file.tell()
+            file.seek(0, os.SEEK_END)
+            size = file.tell()
+            file.seek(curpos)
+        except IOError as e:
+            if e.errno != errno.ESPIPE:
+                raise
+            size = None
+        return size
 
     def replace(self):
         self.do_upload()
@@ -208,7 +221,7 @@ class OpalFile:
         self.do_remove_uploaded()
 
     def do_truncate(self):
-        logging.info('Truncating table {0}:{1}'.format(self.project, self.table))
+        logging.info('Truncating table {0}.{1}'.format(self.project, self.table))
         run_rest_command(
             '/datasource/{0}/table/{1}/valueSets'.format(u(self.project), u(self.table)),
             method='DELETE')
@@ -242,15 +255,18 @@ class OpalFile:
         result = json.loads(run_command(import_cmd))
         job_id = result['id']
         status = result['status']
+        percent = result.get('progress', {}).get('percent', 0)
         logging.log(LOGINFO, "Import job ID: "+str(job_id))
-        if not quiet: sys.stderr.write('Importing data (job id {0})'.format(job_id))
+        if not quiet: sys.stderr.write('Importing data (job id {0})\n'.format(job_id))
         while status == 'IN_PROGRESS':
-            if not quiet: sys.stderr.write('.')
+            if not quiet: sys.stderr.write('\rprogress {0}%'.format(percent))
+            logging.log(LOGINFO, "Progress on job {0}: {1}%".format(job_id, percent))
             time.sleep(1)
             result = json.loads(run_rest_command(
                 '/project/{0}/command/{1}'.format(u(self.project), u(job_id))))
             status = result['status']
-        if not quiet: sys.stderr.write('\n')
+            percent = result.get('progress', {}).get('percent', 0)
+        if not quiet: sys.stderr.write('...done\n')
         if status == 'FAILED':
             err = []
             for msg in result['messages']:
@@ -359,7 +375,7 @@ def get_files():
             else:
                 logging.log(LOGINFO, "Skipping file with wrong format {0}".format(f))
 
-    list.sort(key=lambda f: f.name)
+    list.sort(key=lambda f: f.name.split('_', 1)[0])
     return list
 
 
