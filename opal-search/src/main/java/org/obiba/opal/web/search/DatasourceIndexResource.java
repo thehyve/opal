@@ -26,7 +26,9 @@ import javax.ws.rs.core.UriBuilder;
 import com.google.common.collect.Lists;
 import com.wordnik.swagger.annotations.ApiOperation;
 import org.obiba.magma.*;
+import org.obiba.opal.search.IndexSynchronization;
 import org.obiba.opal.web.model.Opal;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,11 +82,7 @@ public class DatasourceIndexResource extends IndexResource {
     }
 
     void updateIndex(ValueTable table) {
-        if (!synchroManager.isAlreadyQueued(variablesIndexManager, getValueTableIndex(datasource, table.getName()))) {
-            synchroManager.synchronizeIndex(variablesIndexManager, table, 0);
-        }
-        if (!synchroManager.isAlreadyQueued(valuesIndexManager, getValueTableIndex(datasource, table.getName()))) {
-            synchroManager.synchronizeIndex(valuesIndexManager, table, 0);
-        }
+        synchroManager.restartSynchronizeIndex(variablesIndexManager, table, 0);
+        synchroManager.restartSynchronizeIndex(valuesIndexManager, table, 0);
     }
 }

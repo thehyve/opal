@@ -89,6 +89,24 @@ public class IndexSynchronizationManager {
     syncProducer.index(indexManager, table, gracePeriod);
   }
 
+  /**
+   * This does the same as synchronizeIndex, but if the index is currently being updated it is cancelled and re-added
+   * to the queue.
+   *
+   * @param indexManager
+   * @param table
+   * @param gracePeriod
+   */
+  public void restartSynchronizeIndex(IndexManager indexManager, ValueTable table, int gracePeriod) {
+    if(currentTask != null &&
+           currentTask.getValueTable().getName().equals(table.getName()) &&
+           currentTask.getValueTable().getDatasource().getName().equals(table.getDatasource().getName())) {
+      stopTask();
+    }
+
+    syncProducer.index(indexManager, table, gracePeriod, true);
+  }
+
   public IndexSynchronization getCurrentTask() {
     return currentTask;
   }
@@ -150,12 +168,20 @@ public class IndexSynchronizationManager {
     }
 
     private void index(IndexManager indexManager, ValueTable table, int seconds) {
+      index(indexManager, table, seconds, false);
+    }
+
+    private void index(IndexManager indexManager, ValueTable table, int seconds, boolean force) {
       // The index needs to be updated
       Value value = table.getTimestamps().getLastUpdate();
       // Check that the last modification to the ValueTable is older than the gracePeriod
       // If we don't know (null value), reindex
       if(value.isNull() || value.compareTo(gracePeriod(seconds)) < 0) {
-        submitTask(indexManager, table);
+        if (force) {
+          forceSubmitTask(indexManager, table);
+        } else {
+          submitTask(indexManager, table);
+        }
       }
     }
 
@@ -185,9 +211,22 @@ public class IndexSynchronizationManager {
           currentTask.getValueTableIndex().getIndexName().equals(index.getIndexName())) return;
 
       if(!isAlreadyQueued(indexManager, index)) {
-        log.trace("Queueing for indexing {} in {}", index.getIndexName(), indexManager.getName());
-        indexSyncQueue.offer(indexManager.createSyncTask(table, index));
+        forceSubmitTask(indexManager, table);
       }
+    }
+
+    /**
+     * Add an index to the indexation queue without checking if it is already in there or if it is the currently
+     * running task. This can be useful to re-start a currently running index job that has been signalled to stop but
+     * hasn't stopped yet.
+     *
+     * @param indexManager
+     * @param table
+     */
+    private void forceSubmitTask(IndexManager indexManager, ValueTable table) {
+      ValueTableIndex index = indexManager.getIndex(table);
+      log.trace("Queueing for indexing {} in {}", index.getIndexName(), indexManager.getName());
+      indexSyncQueue.offer(indexManager.createSyncTask(table, index));
     }
 
     private void deleteCurrentTaskFromQueue() {
