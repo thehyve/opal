@@ -1,7 +1,7 @@
 package org.obiba.opal.core.service;
 
 import org.obiba.magma.*;
-import org.obiba.opal.core.service.validation.DataValidator;
+import org.obiba.opal.core.service.validation.DataConstraint;
 import org.obiba.opal.core.service.validation.ValidatorFactory;
 import org.obiba.opal.core.support.MessageLogger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,22 +64,22 @@ public class ValidationServiceImpl implements ValidationService {
 */
 
     private ValidationResult validate(ValueTable valueTable, final MessageLogger logger,
-                                      Map<String, List<DataValidator>> validatorMap) {
+                                      Map<String, List<DataConstraint>> constraintMap) {
 
         final ValidationResult result = new ValidationResult();
 
         logger.info("Validating table %s.%s", valueTable.getDatasource().getName(), valueTable.getName());
 
         for (ValueSet vset : valueTable.getValueSets()) {
-            for (Map.Entry<String, List<DataValidator>> entry : validatorMap.entrySet()) {
+            for (Map.Entry<String, List<DataConstraint>> entry : constraintMap.entrySet()) {
                 String varName = entry.getKey();
                 Value value = valueTable.getValue(valueTable.getVariable(varName), vset);
 
-                List<DataValidator> validators = entry.getValue();
-                for (DataValidator validator : validators) {
-                    if (!validator.isValid(value)) {
-                        logger.warn(getValidationFailMessage(validator, varName, value));
-                        result.addFailure(varName, validator.getType(), value);
+                List<DataConstraint> constraints = entry.getValue();
+                for (DataConstraint constraint : constraints) {
+                    if (!constraint.isValid(value)) {
+                        logger.warn(getValidationFailMessage(constraint, varName, value));
+                        result.addFailure(varName, constraint.getType(), value);
                     }
                 }
             }
@@ -103,10 +103,10 @@ public class ValidationServiceImpl implements ValidationService {
 
         if (isValidationEnabled(valueTable)) {
             for (Variable var: valueTable.getVariables()) {
-                List<DataValidator> validators = validatorFactory.getValidators(var);
-                if (validators != null && validators.size() > 0) {
-                    logger.info("Validators for variable %s: %s", var.getName(), validators.toString());
-                    task.addValidators(var, validators);
+                List<DataConstraint> constraints = validatorFactory.getValidators(valueTable, var);
+                if (constraints != null && constraints.size() > 0) {
+                    logger.info("Validators for variable %s: %s", var.getName(), constraints.toString());
+                    task.addConstraints(var, constraints);
                 }
             }
         }
@@ -114,7 +114,7 @@ public class ValidationServiceImpl implements ValidationService {
         return task;
     }
 
-    private String getValidationFailMessage(DataValidator validator, String varName, Value value) {
+    private String getValidationFailMessage(DataConstraint validator, String varName, Value value) {
         return String.format("Failed validation for rule %s on variable %s: %s", validator.getType(), varName, String.valueOf(value));
     }
 
@@ -126,33 +126,33 @@ public class ValidationServiceImpl implements ValidationService {
         @NotNull
         private final MessageLogger logger;
 
-        private final Map<String, List<DataValidator>> validatorMap = new HashMap<>();
+        private final Map<String, List<DataConstraint>> constraintMap = new HashMap<>();
 
         public InternalValidationTask(ValueTable valueTable, MessageLogger logger) {
             this.valueTable = valueTable;
             this.logger = logger;
         }
 
-        private void addValidators(Variable var, List<DataValidator> validators) {
-            validatorMap.put(var.getName(), validators);
+        private void addConstraints(Variable var, List<DataConstraint> constraints) {
+            constraintMap.put(var.getName(), constraints);
         }
 
         private boolean isEmpty() {
-            return validatorMap.isEmpty();
+            return constraintMap.isEmpty();
         }
 
         @Override
         public List<String> getVariableNames() {
-            return new ArrayList<>(validatorMap.keySet());
+            return new ArrayList<>(constraintMap.keySet());
         }
 
         @Override
         public boolean isValid(Variable var, Value value) {
-            List<DataValidator> validators = validatorMap.get(var.getName());
-            if (validators != null) {
-                for (DataValidator validator: validators) {
-                    if (!validator.isValid(value)) {
-                        logger.warn(getValidationFailMessage(validator, var.getName(), value));
+            List<DataConstraint> constraints = constraintMap.get(var.getName());
+            if (constraints != null) {
+                for (DataConstraint constraint: constraints) {
+                    if (!constraint.isValid(value)) {
+                        logger.warn(getValidationFailMessage(constraint, var.getName(), value));
                         return false;
                     }
                 }
@@ -162,7 +162,7 @@ public class ValidationServiceImpl implements ValidationService {
 
         @Override
         public ValidationResult validate() {
-            return ValidationServiceImpl.this.validate(valueTable, logger, validatorMap);
+            return ValidationServiceImpl.this.validate(valueTable, logger, constraintMap);
         }
     }
 }

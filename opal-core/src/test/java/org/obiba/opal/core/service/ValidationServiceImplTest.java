@@ -8,8 +8,7 @@ import org.obiba.magma.support.StaticValueTable;
 import org.obiba.opal.core.service.ValidationService.ValidationResult;
 import org.obiba.opal.core.service.ValidationService.ValidationTask;
 import org.obiba.opal.core.service.validation.ValidatorFactory;
-import org.obiba.opal.core.service.validation.VocabularyValidator;
-import org.obiba.opal.core.support.MessageLogger;
+import org.obiba.opal.core.service.validation.VocabularyConstraint;
 import org.obiba.opal.core.support.SystemOutMessageLogger;
 
 import java.util.HashSet;
@@ -58,7 +57,7 @@ public class ValidationServiceImplTest {
 		List<String> pair = pairs.iterator().next();
 		Assert.assertEquals("wrong length", 2, pair.size());
 		Assert.assertEquals("wrong variable", MagmaHelper.VOCAB_VARIABLE, pair.get(0));
-		Assert.assertEquals("wrong rule", VocabularyValidator.TYPE, pair.get(1));
+		Assert.assertEquals("wrong rule", VocabularyConstraint.TYPE, pair.get(1));
 		Set<Value> failedValues = result.getFailedValues(pair.get(0), pair.get(1));
 		Assert.assertEquals("wrong count", 1, failedValues.size());
 		Assert.assertEquals("value mismatch", INVALID_CODE, failedValues.iterator().next().toString());
