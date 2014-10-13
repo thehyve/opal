@@ -9,6 +9,7 @@ import org.obiba.magma.ValueTable;
 import org.obiba.magma.Variable;
 import org.obiba.opal.core.support.MessageLogger;
 
+import javax.validation.ValidationException;
 import java.util.List;
 import java.util.Set;
 
@@ -85,11 +86,12 @@ public interface ValidationService {
         List<String> getVariableNames();
 
         /**
+         * Validates the given value for variable.
          * @param variable
          * @param value
-         * @return false if variable has validation enabled and some rule failed for given value, true otherwise
+         * @throws ValidationException if the given value is not valid
          */
-        boolean isValid(Variable variable, Value value);
+        void validate(Variable variable, Value value) throws ValidationException;
 
         /**
          * Validates the whole table data, collecting and returning the results
