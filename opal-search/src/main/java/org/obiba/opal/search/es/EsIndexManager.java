@@ -269,10 +269,6 @@ abstract class EsIndexManager implements IndexManager, ValueTableUpdateListener 
 
     private boolean mappingCreated;
 
-    /**
-     * @param vt
-     * @param prefixName used to avoid same type name. (Must be unique in ES (even though in different ES indices))
-     */
     EsValueTableIndex(@NotNull ValueTable vt) {
       name = indexName(vt);
       valueTableReference = vt.getTableReference();
