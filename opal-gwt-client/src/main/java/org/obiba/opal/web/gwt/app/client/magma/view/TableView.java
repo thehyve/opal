@@ -157,6 +157,9 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
   Panel valuesPanel;
 
   @UiField
+  Panel validationPanel;
+
+    @UiField
   OpalSimplePager pager;
 
   @UiField
@@ -268,6 +271,8 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
       panel = permissionsPanel;
     } else if(slot == Slots.ContingencyTable) {
       panel = crossResultsPanel;
+    } else if (slot == Slots.Validation) {
+      panel = validationPanel;
     }
 
     if(panel != null) {
@@ -491,6 +496,11 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
   void onValuesTabSelect(ClickEvent event) {
     getUiHandlers().onShowValues();
   }
+
+  @UiHandler("validationTab")
+  void onValidationTabSelect(ClickEvent event) {
+        getUiHandlers().onShowValidation();
+    }
 
   @UiHandler("downloadDictionary")
   void onDownloadDictionary(ClickEvent event) {
