@@ -361,6 +361,11 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
       valuesTablePresenter.updateValuesDisplay("");
     }
 
+    if(getView().isValidationTabSelected()) {
+      tableValidationPresenter.setTable(tableDto);
+      tableValidationPresenter.updateValuesDisplay("");
+    }
+
     variableFilter = "";
     updateVariables();
     updateTableIndexStatus();
@@ -876,6 +881,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     HasAuthorization getPermissionsAuthorizer();
 
     boolean isValuesTabSelected();
+
+    boolean isValidationTabSelected();
 
     void setIndexStatusVisible(boolean b);
 
