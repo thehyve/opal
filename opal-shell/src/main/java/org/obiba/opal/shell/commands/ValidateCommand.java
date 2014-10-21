@@ -70,7 +70,13 @@ public class ValidateCommand
         MessageLogger logger = new OpalShellMessageAdapter(getShell());
         ValidationService.ValidationTask task =  validationService.createValidationTask(valueTable, logger);
         try {
-            ValidationResult result = task.validate();
+            final ValidationResult result;
+            if (task != null) {
+                result = task.validate();
+            } else {
+                //no validation for the table
+                result = new ValidationResult();
+            }
             resultBuilder.setHasFailures(result.hasFailures());
             resultBuilder.setRules(getRulesJson(result));
             resultBuilder.setFailures(getFailuresJson(result));
