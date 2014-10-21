@@ -2,40 +2,55 @@
 
 from __future__ import print_function, division
 
-import sys, os
+import sys, os, errno
 import re
 import logging
 import subprocess
 import json
 import time
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 import csv
 from urllib import quote_plus
 import shutil
+from StringIO import StringIO
 from os import path, listdir
 from os.path import expanduser, isfile
-import time
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
-current_time_millis = lambda: int(round(time.time() * 1000))
 
 
 ## Parse config file ##
 
-def parse_config():
+CONFIGFILE = expanduser('~/.opal/fileupload.conf')
+
+def setup():
     global url, file_type, done, src_folder, done_folder, opal_folder, logfile, auth_params
 
     config = ConfigParser()
-    config.read(expanduser('~/.opal/fileupload.conf'))
+    try:
+        with open(CONFIGFILE) as conf:
+            config.readfp(conf)
 
-    url = config.get('main', 'url')
-    file_type = config.get('main', 'file_type')
-    done = config.get('main', 'done')
-    src_folder = expanduser(config.get('main', 'src_folder'))
-    done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
-    opal_folder = config.get('main', 'opal_folder')
-    logfile = expanduser(config.get('main', 'logfile'))
+            url = config.get('main', 'url')
+            file_type = config.get('main', 'file_type')
+            done = config.get('main', 'done')
+            src_folder = expanduser(config.get('main', 'src_folder'))
+            done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
+            opal_folder = config.get('main', 'opal_folder')
+            logfile = expanduser(config.get('main', 'logfile'))
+
+    except IOError as e:
+        if e.errno == 2:
+            handle_exception(OpalUploadError("Configuration file not found: "+CONFIGFILE))
+            sys.exit(1)
+        raise
+    except (NoSectionError, NoOptionError) as e:
+        handle_exception(OpalUploadError("Error reading configuration file: "+str(e)))
+        sys.exit(1)
+
+
+    configure_logging()
 
     if config.has_option('main', 'use_certificate') and \
        config.getboolean('main', 'use_certificate'):
@@ -44,21 +59,29 @@ def parse_config():
         auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
 
     if file_type != 'csv':
-        logging.error('file_type = {0}. File types other than "csv" are not currently supported'.format(file_type))
+        handle_exception(OpalUploadError(
+            'Configuration file error: file_type = {0}. File types other than "csv" are not currently '
+            'supported'.format(file_type)))
         sys.exit(1)
     if done not in ('move', 'delete', 'none'):
-        logging.error('done = {0}, should be one of "move", "delete" or "none"'.format(done))
+        handle_exception(OpalUploadError(
+            'Configureation file error: done = {0}, should be one of "move", "delete" or "none"'.format(done)))
         sys.exit(1)
 
-parse_config()
+    if not done_folder.endswith('/'):
+        done_folder += '/'
+
 
 ## Configure logging ##
 
+# define an intermediate level for info that should by default be logged to the logfile but not to the command line
+LOGINFO = logging.INFO - 5
+logging.addLevelName(LOGINFO, 'LOGINFO')
 def configure_logging():
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     logfilehandler = logging.FileHandler(logfile)
-    logfilehandler.setLevel(logging.INFO)
+    logfilehandler.setLevel(LOGINFO)
     logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
     logging.getLogger().addHandler(logfilehandler)
 
@@ -66,42 +89,35 @@ def configure_logging():
     stderrhandler.setLevel(logging.INFO)
     if verbose:
         stderrhandler.setLevel(logging.DEBUG)
-        logging.getLogger().setLevel(logging.DEBUG)
         logfilehandler.setLevel(logging.DEBUG)
     if quiet:
         stderrhandler.setLevel(logging.WARN)
     logging.getLogger().addHandler(stderrhandler)
-
-configure_logging()
 
 
 MAX_URL_SIZE = 2000
 
 
 def u(it):
+    """url-encode string/unicode"""
     return quote_plus(str(it))
 
+# This exception indicates that this is a known error condition handled by the code, so no need to print stacktraces
+# and such.
+class OpalUploadError (Exception):
+    pass
 
 class OpalFile:
 
-    reindex_projects = []
+    reindex_tables = []
     operations = ['update', 'delete', 'replace']
-
-    @staticmethod
-    def do_reindex(project):
-        logging.info('starting reindex for project {0}'.format(project))
-        run_rest_command('/datasource/{0}/indexes'.format(u(project)), method='PUT')
 
     # Retain the order in which the files were processed, but only reindex each project once.
     @classmethod
     def reindex_all(cls):
-        for p in cls.reindex_projects:
-            try:
-                cls.do_reindex(p)
-            except Exception as e:
-                logging.error('Error while reindexing project {0}: {1}'.format(p, e))
-                logging.debug(e, exc_info=True)
-        del cls.reindex_projects[:]
+        logging.info('starting reindex for tables {0}'.format(', '.join(cls.reindex_tables)))
+        run_rest_command_params('/indexes', ('table='+u(t) for t in cls.reindex_tables), 'PUT')
+        del cls.reindex_tables[:]
 
 
     def __init__(self, filename):
@@ -118,10 +134,13 @@ class OpalFile:
                             'Valid operations: update, delete, replace'.format(filename))
         self.path = path.join(src_folder, filename)
 
+    def table_reference(self):
+        return self.project + '.' + self.table
+
     # processes this file
     def process(self):
         logging.info('processing '+self.name)
-        time1 = current_time_millis()
+        start_time = time.time()
 
         if not self.operation in self.operations:
             raise Exception("Operation '{0}' not implemented".format(self.operation))
@@ -130,8 +149,7 @@ class OpalFile:
 
         getattr(self, 'done_'+done)()
 
-        ellapsed = current_time_millis() - time1
-        logging.info('finished processing %s in %s millis', self.name, ellapsed)
+        logging.info('finished processing {0} in {1:.3f} seconds'.format(self.name, time.time() - start_time))
 
     def update(self):
         self.do_upload()
@@ -139,42 +157,49 @@ class OpalFile:
             self.do_import()
         finally:
             self.schedule_reindex()
+            self.do_remove_uploaded()
 
     def delete(self):
-        base_url = '/datasource/{0}/table/{1}/valueSets?'.format(u(self.project), u(self.table))
-        ids = []
-        # urllen needs to be a mutable object so it can be changed from within send()
-        urllen = [len(base_url)]
+        # Delete ids are sent as url parameters. Sending a too large url results in an error 413 FULL HEAD,
+        # so we need to split large deletions up over several requests.
+        with open(self.path) as idfile:
+            size = filesize(idfile)
+            url = '/datasource/{0}/table/{1}/valueSets'.format(u(self.project), u(self.table))
 
-        def send():
-            if not ids: return
-            run_rest_command(base_url + '&'.join(ids), method='DELETE')
-            self.schedule_reindex()
-            del ids[:]
-            urllen[0] = len(base_url)
+            if quiet:
+                callback = self.schedule_reindex
+            elif size:
+                def callback():
+                    sys.stderr.write('\rDeleting, {0:.0%} completed...'.format(idfile.tell() / size))
+                    self.schedule_reindex()
+            else:
+                def callback():
+                    sys.stderr.write('.')
+                    self.schedule_reindex()
 
-        for id in self.delete_ids():
-            idstring = 'id='+u(id)
-            if urllen[0] + len(idstring) + 1 > MAX_URL_SIZE*10:
-                send()
-            urllen[0] += len(idstring) + 1
-            ids.append(idstring)
-        send()
+            if not quiet and not size: sys.stderr.write('Deleting.')
 
-    def delete_ids(self):
-        with open(self.path) as f:
-            reader = csv.DictReader(f)
-            for l in reader:
-                yield l['id']
+            params = ('id='+u(id) for id in self.delete_ids(idfile))
+            run_rest_command_params(url, params, method='DELETE', progresscallback=callback)
+
+            if not quiet: sys.stderr.write('done\n')
+
+    def delete_ids(self, idfile):
+        reader = csv.reader(idfile)
+        # skip header
+        reader.next()
+        for l in reader:
+            yield l[0]
 
     def replace(self):
         self.do_upload()
         self.do_truncate()
         self.schedule_reindex()
         self.do_import()
+        self.do_remove_uploaded()
 
     def do_truncate(self):
-        logging.info('Truncating table {0}:{1}'.format(self.project, self.table))
+        logging.info('Truncating table {0}.{1}'.format(self.project, self.table))
         run_rest_command(
             '/datasource/{0}/table/{1}/valueSets'.format(u(self.project), u(self.table)),
             method='DELETE')
@@ -182,7 +207,7 @@ class OpalFile:
     @property
     def entity_type(self):
         if not self._entity_type:
-            logging.debug('loading entity type for table {0}'.format(self.table))
+            logging.log(LOGINFO, 'loading entity type for table {0}'.format(self.table))
             res = json.loads(run_rest_command(
                 '/datasource/{0}/table/{1}'.format(u(self.project), u(self.table))))
             self._entity_type = res['entityType']
@@ -193,49 +218,106 @@ class OpalFile:
         #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
         logging.info('Uploading '+self.path)
         upload_cmd = ['opal', 'file'] + auth_params + ['-up', self.path, opal_folder]
-        run_command(upload_cmd)
+        try:
+            run_command(upload_cmd)
+        except subprocess.CalledProcessError as e:
+            if '404 Not Found' in e.output:
+                raise OpalUploadError("Folder '{0}' does not exist on the server".format(opal_folder))
+            raise
         
     def do_import(self):
         # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
         #      -pa <opalfs_self_path> -ty <entity_type> -t <table>
-        import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', 
+        import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', '-ncv',
                       '-pa', opal_folder+'/'+self.name, '-ty', self.entity_type, '-t', self.table]
         result = json.loads(run_command(import_cmd))
         job_id = result['id']
         status = result['status']
-        if status == 'IN_PROGRESS':
-            if not quiet: sys.stderr.write('Importing data')
-            while status == 'IN_PROGRESS':
-                if not quiet: sys.stderr.write('.')
-                time.sleep(1)
-                result = json.loads(run_rest_command(
-                    '/project/{0}/command/{1}'.format(u(self.project), u(job_id))))
-                status = result['status']
-                if status == 'FAILED':
-                    raise Exception('Import job failed: {0}'.format(self.name))
-            if not quiet: sys.stderr.write('\n')
+        percent = result.get('progress', {}).get('percent', 0)
+        logging.log(LOGINFO, "Import job ID: "+str(job_id))
+        if not quiet: sys.stderr.write('Importing data (job id {0})\n'.format(job_id))
+        while status == 'IN_PROGRESS':
+            if not quiet: sys.stderr.write('\rprogress {0}%'.format(percent))
+            logging.log(LOGINFO, "Progress on job {0}: {1}%".format(job_id, percent))
+            time.sleep(1)
+            result = json.loads(run_rest_command(
+                '/project/{0}/command/{1}'.format(u(self.project), u(job_id))))
+            status = result['status']
+            percent = result.get('progress', {}).get('percent', 0)
+        if not quiet: sys.stderr.write('...done\n')
+        if status == 'FAILED':
+            err = []
+            for msg in result['messages']:
+                match = re.match(r'Variables do not exist in (.*) and creating new variables is disabled: (.*)', msg['msg'])
+                if match:
+                    err.append("variable(s) {0} do not exist in table {1}".format(match.groups()[1], match.groups()[0]))
+            if err:
+                err.append("make sure the first row of the .csv file is a header row.")
+                raise OpalUploadError(', '.join(err))
+
+            raise Exception('Import job failed: {0}\nJob messages:\n{1}'.format(
+                self.name, '\n'.join('* '+m['msg'].strip() for m in result['messages'])))
+
+    def do_remove_uploaded(self):
+        # opal file -o <url> -u administrator -p password --delete /data_import/sample.csv
+        remove_cmd = ['opal', 'file'] + auth_params + ['--delete', opal_folder + '/' + self.name, '-f']
+        run_command(remove_cmd)
 
     def schedule_reindex(self):
-        if self.project not in self.reindex_projects:
-            self.reindex_projects.append(self.project)
+        if self.project not in self.reindex_tables:
+            self.reindex_tables.append(self.table_reference())
 
     def done_delete(self):
         logging.info('deleting {0}'.format(self.path))
         os.remove(self.path)
 
     def done_move(self):
+        if not path.isdir(done_folder):
+            raise OpalUploadError("done_folder '{0}' does not exist".format(done_folder))
         try:
             destpath = path.join(done_folder, self.name)
             if path.exists(destpath):
                 logging.warn('Destination {0} exists, attempting to overwrite'.format(destpath))
                 os.remove(destpath)
         except OSError as e:
-            logging.debug(e, exc_info=True)
+            logging.error(e)
+            logging.log(LOGINFO, e, exc_info=True)
         logging.info('moving {0} to {1}'.format(self.path, done_folder))
-        shutil.move(self.path, done_folder)
+        try:
+            shutil.move(self.path, done_folder)
+        except OSError as e:
+            raise OpalUploadError("Cannot move file to done_folder: "+str(e))
 
     def done_none(self):
         pass
+
+
+def run_rest_command_params(url, params, method, progresscallback=lambda: None):
+    """
+    Call a rest url with the list of parameters. If there are too many parameters to fit in a single request,
+    split them up into multiple requests.
+
+    If the list of parameters is empty, no request will be made.
+    """
+    # Sending a request with too many parameters results in an error 413 FULL HEAD,
+
+    url += '?'
+    urlwriter = StringIO()
+    urlwriter.write(url)
+
+    def send():
+        # if no parameters, return
+        if urlwriter.len == len(url): return
+        # strip off last '&'
+        run_rest_command(urlwriter.getvalue()[:-1], method=method)
+        urlwriter.seek(len(url)); urlwriter.truncate()
+        progresscallback()
+
+    for param in params:
+        if urlwriter.len + len(param) > MAX_URL_SIZE:
+            send()
+        urlwriter.write(param+'&')
+    send()
 
 
 def run_rest_command(url, method=None):
@@ -245,7 +327,7 @@ def run_rest_command(url, method=None):
     return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
 
 def run_command(cmd):
-    logging.debug('executing ' + ' '.join(hide_password(cmd)))
+    logging.log(LOGINFO, 'executing ' + ' '.join(hide_password(cmd)))
     process = None
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -254,8 +336,12 @@ def run_command(cmd):
         output = err+'\n'+out
         logging.debug(output)
         if retcode != 0:
-            logging.error('subcommand exited with return code {0}: {1}'.format(
-                retcode, ' '.join(hide_password(cmd))))
+            logging.log(LOGINFO, 'subcommand exited with return code {0}: {1}'.format(
+                retcode, limit_length(' '.join(hide_password(cmd)))))
+            if '401 Unauthorized' in output:
+                raise OpalUploadError("Authorization failed, make sure your username and password are correct")
+            if 'Could not resolve host' in output:
+                raise OpalUploadError("Could not resolve hostname: "+url)
             err = subprocess.CalledProcessError(retcode, hide_password(cmd))
             err.output = output
             raise err
@@ -274,24 +360,54 @@ def hide_password(cmd):
     except ValueError:
         return cmd
 
+def limit_length(msg, maxlen=1000, end=".....rest of message not shown...."):
+    if len(msg) > maxlen:
+        msg = msg[:1000-len(end)] + end
+    return msg
+
+def filesize(file):
+    "Get the file size of an open file. The file must be seekable, otherwise returns None."
+    try:
+        curpos = file.tell()
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(curpos)
+    except IOError as e:
+        if e.errno != errno.ESPIPE:
+            raise
+        size = None
+    return size
+
 
 # returns a list of ImportFile, ordered by date (oldest first)
 def get_files():
     list = []
-    for f in listdir(src_folder):
+    try:
+        files = listdir(src_folder)
+    except OSError as e:
+        raise OpalUploadError("Can not access src_folder: " + str(e))
+    for f in files:
         fullname = path.join(src_folder, f)
         if isfile(fullname):
             if f.endswith('.'+file_type):
                 list.append(OpalFile(f))
             else:
-                logging.debug("Skipping file with wrong format {0}".format(f))
+                logging.log(LOGINFO, "Skipping file with wrong format {0}".format(f))
 
-    list.sort(key=lambda f: f.name)
+    list.sort(key=lambda f: f.name.split('_', 1)[0])
     return list
 
 
 def handle_exception(e):
-    logging.error(e)
+    if isinstance(e, OpalUploadError):
+        logging.error('Error: ' + str(e))
+        return
+
+    msg = "Error: {0}: {1}".format(type(e).__name__, e)
+    if isinstance(e, subprocess.CalledProcessError):
+        msg += '\nCommand output: ' + e.output.rstrip()
+
+    logging.error(msg)
     if not verbose:
         print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
     logging.debug(e, exc_info=True)
@@ -311,7 +427,6 @@ def main():
         
     # We try to reindex even if there was an error in one of the uploads, to make sure other changed tables are up to date.
     try:
-        logging.info("updating indexes")
         OpalFile.reindex_all()
         logging.info('done')
     except Exception as e:
@@ -322,4 +437,5 @@ def main():
     
 
 if __name__ == '__main__':
+    setup()
     main()
