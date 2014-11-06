@@ -215,6 +215,7 @@
                                           <includes>
                                               <include>opal</include>
                                               <include>opal_upload</include>
+                                              <include>opal_permission_revoke</include>
                                           </includes>
                                       </source>
                                   </sources>
@@ -250,6 +251,9 @@
                                       </source>
                                       <source>
                                           <location>src/main/python/scripts/fileupload.conf.sample</location>
+                                      </source>
+                                      <source>
+                                          <location>src/main/python/scripts/permissionrevoke.conf.sample</location>
                                       </source>
                                   </sources>
                               </mapping>

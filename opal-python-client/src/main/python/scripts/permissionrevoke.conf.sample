@@ -1,0 +1,19 @@
+# SAMPLE fileupload.conf
+
+[main]
+#url to the opal server
+url = http://localhost:8080
+
+#username
+user = administrator
+#password
+password = password
+
+#project to revoke permissions on
+project = project
+
+#name of table that contains permission revoke records
+table = permission_revoke
+
+#full path to the log file
+logfile = ~/permissionrevoke.log

@@ -1,0 +1,284 @@
+#!/usr/bin/python
+
+from __future__ import print_function, division
+
+import sys, os, errno
+import re
+import logging
+import subprocess
+import json
+import time
+from ConfigParser import ConfigParser, NoSectionError, NoOptionError
+import csv
+from urllib import quote_plus
+import shutil
+from StringIO import StringIO
+from os import path, listdir
+from os.path import expanduser, isfile
+
+verbose = '-v' in sys.argv
+quiet = '-q' in sys.argv
+
+## Parse config file ##
+
+CONFIGFILE = expanduser('~/.opal/permissionrevoke.conf')
+
+def setup():
+    global url, project, permission_revoke_table, logfile, auth_params
+
+    config = ConfigParser()
+    try:
+        with open(CONFIGFILE) as conf:
+            config.readfp(conf)
+
+            url = config.get('main', 'url')
+            project = config.get('main', 'project')
+            permission_revoke_table = config.get('main', 'table')
+            logfile = expanduser(config.get('main', 'logfile'))
+
+    except IOError as e:
+        if e.errno == 2:
+            handle_exception(KnownError("Configuration file not found: "+CONFIGFILE))
+            sys.exit(1)
+        raise
+    except (NoSectionError, NoOptionError) as e:
+        handle_exception(KnownError("Error reading configuration file: "+str(e)))
+        sys.exit(1)
+
+    configure_logging()
+
+    auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+
+## Configure logging ##
+
+# define an intermediate level for info that should by default be logged to the logfile but not to the command line
+LOGINFO = logging.INFO - 5
+logging.addLevelName(LOGINFO, 'LOGINFO')
+def configure_logging():
+    logging.getLogger().setLevel(logging.DEBUG)
+
+    logfilehandler = logging.FileHandler(logfile)
+    logfilehandler.setLevel(LOGINFO)
+    logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
+    logging.getLogger().addHandler(logfilehandler)
+
+    stderrhandler = logging.StreamHandler()
+    stderrhandler.setLevel(logging.INFO)
+    if verbose:
+        stderrhandler.setLevel(logging.DEBUG)
+        logfilehandler.setLevel(logging.DEBUG)
+    if quiet:
+        stderrhandler.setLevel(logging.WARN)
+    logging.getLogger().addHandler(stderrhandler)
+
+
+MAX_URL_SIZE = 2000
+
+
+def u(it):
+    """url-encode string/unicode"""
+    return quote_plus(str(it))
+
+# This exception indicates that this is a known error condition handled by the code, so no need to print stacktraces
+# and such.
+class KnownError (Exception):
+    pass
+
+#Returns a string representation of a subject (principal + type)
+def get_subject_key(principal, type):
+    return principal + '/' + type
+
+#we don' want to mess up with administrator permissions, we exclude it when needed
+admSubject = get_subject_key('administrator', 'USER')
+
+class RevokeRow:
+
+    def __init__(self, values_dict):
+        self.type = values_dict['type']
+        self.principal = values_dict['principal']
+        self.expiration_date = values_dict['expiration_date']
+        self.subject = get_subject_key(self.principal, self.type)
+
+    def process(self, table):
+
+        logging.info('Revoking permissions for {0} \'{1}\' on table \'{2}\' (expires in {3})'.format(
+            self.type.lower(), self.principal, table, self.expiration_date))
+
+        url = '/project/{0}/permissions/table/{1}?type={2}&principal={3}'.format(
+            u(project), u(table), self.type, u(self.principal))
+
+        run_rest_command(url, 'DELETE')
+
+#Returns the REST url for getting the revoke rows expired before today
+def get_retrieve_revoke_rows_query():
+    today = time.strftime('%Y-%m-%d')
+    query = ':[* TO {0}]'.format(today)
+    return '/datasource/{0}/table/{1}/valueSets/_search?query={0}-{1}-{2}{3}'.format(
+        u(project), u(permission_revoke_table), 'expiration_date', u(query))
+
+#Returns a dictionary with the index (0-based position) for each variable
+def get_var_indices(vars):
+    var_names = ['type', 'principal', 'expiration_date']
+    return dict((n, vars.index(n)) for n in var_names)
+
+#Returns a dictionary with revoke row variable values
+def get_row_values(var_indices, source_values):
+    result = dict()
+    for v in var_indices:
+        result[v] = source_values[var_indices[v]]['value']
+    return result
+
+#Returns a list of RevokeRow to process, without any specific order
+def get_revoke_rows():
+    list = []
+    res = json.loads(run_rest_command(get_retrieve_revoke_rows_query()))
+    vsets = res['valueSets']
+    var_indices = get_var_indices(vsets['variables'])
+    sourceList = vsets['valueSets']
+
+    for sourceRow in sourceList:
+        row_values = get_row_values(var_indices, sourceRow['values'])
+        list.append(RevokeRow(row_values))
+
+    return list
+
+#Returns a list will all project tables, except the configured permission revoke table
+def get_project_tables():
+    res = json.loads(run_rest_command('/datasource/{0}'.format(u(project))))
+    result = res['table']
+    result.remove(permission_revoke_table) #always remove the permission revoke table
+    return result
+
+#Returns a list of subject keys for the given table, except the administrator subject
+def get_table_subjects(table):
+    res = json.loads(run_rest_command('/project/{0}/permissions/table/{1}'.format(
+        u(project), u(table))))
+
+    result = []
+    for e in res:
+        subj = e['subject']
+        key = get_subject_key(subj['principal'], subj['type'])
+        result.append(key)
+
+    if admSubject in result:
+        result.remove(admSubject) #remove the administrator subject
+    return result
+
+#Returns a dictionary of table to list of existing subjects
+def get_all_tables_subjects():
+    all_tables = get_project_tables()
+    return dict((t, get_table_subjects(t)) for t in all_tables)
+
+def run_rest_command_params(url, params, method, progresscallback=lambda: None):
+    """
+    Call a rest url with the list of parameters. If there are too many parameters to fit in a single request,
+    split them up into multiple requests.
+
+    If the list of parameters is empty, no request will be made.
+    """
+    # Sending a request with too many parameters results in an error 413 FULL HEAD,
+
+    url += '?'
+    urlwriter = StringIO()
+    urlwriter.write(url)
+
+    def send():
+        # if no parameters, return
+        if urlwriter.len == len(url): return
+        # strip off last '&'
+        run_rest_command(urlwriter.getvalue()[:-1], method=method)
+        urlwriter.seek(len(url)); urlwriter.truncate()
+        progresscallback()
+
+    for param in params:
+        if urlwriter.len + len(param) > MAX_URL_SIZE:
+            send()
+        urlwriter.write(param+'&')
+    send()
+
+
+def run_rest_command(url, method=None):
+    m = []
+    if method != None:
+        m = ['-m', method]
+    return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
+
+def run_command(cmd):
+    logging.log(LOGINFO, 'executing ' + ' '.join(hide_password(cmd)))
+    process = None
+    try:
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = process.communicate()
+        retcode = process.wait()
+        output = err+'\n'+out
+        logging.debug(output)
+        if retcode != 0:
+            logging.log(LOGINFO, 'subcommand exited with return code {0}: {1}'.format(
+                retcode, limit_length(' '.join(hide_password(cmd)))))
+            if '401 Unauthorized' in output:
+                raise KnownError("Authorization failed, make sure your username and password are correct")
+            if 'Could not resolve host' in output:
+                raise KnownError("Could not resolve hostname: "+url)
+            err = subprocess.CalledProcessError(retcode, hide_password(cmd))
+            err.output = output
+            raise err
+        return out
+    except:
+        if process:
+            if process.poll() is None:
+                process.kill()
+            process.wait()
+        raise
+
+def hide_password(cmd):
+    try:
+        password_idx = cmd.index('-p')
+        return cmd[:password_idx+1] + ['{password_not_logged}'] + cmd[password_idx+2:]
+    except ValueError:
+        return cmd
+
+def limit_length(msg, maxlen=1000, end=".....rest of message not shown...."):
+    if len(msg) > maxlen:
+        msg = msg[:1000-len(end)] + end
+    return msg
+
+def handle_exception(e):
+    if isinstance(e, KnownError):
+        logging.error('Error: ' + str(e))
+        return
+
+    msg = "Error: {0}: {1}".format(type(e).__name__, e)
+    if isinstance(e, subprocess.CalledProcessError):
+        msg += '\nCommand output: ' + e.output.rstrip()
+
+    logging.error(msg)
+    if not verbose:
+        print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
+    logging.debug(e, exc_info=True)
+
+def main():
+    retcode = 0
+    try:
+        #get rows from revoke table that have expiration date in the past
+        rows = get_revoke_rows()
+
+        #get table subjects
+        table_subjects = get_all_tables_subjects()
+
+        #for every table..
+        for table, subjects in table_subjects.iteritems():
+            #for every RevokeRow..
+            for r in rows:
+                if r.subject in subjects:
+                    r.process(table) #process it if it matches one of the current subjects
+
+    except Exception as e:
+        handle_exception(e)
+        retcode |= 1
+        
+    sys.exit(retcode)
+    
+
+if __name__ == '__main__':
+    setup()
+    main()
