@@ -32,7 +32,7 @@ def setup():
             config.readfp(conf)
 
             url = config.get('main', 'url')
-            revoke_table_ref = config.get('main', 'revokeTableRef')
+            revoke_table_ref = config.get('main', 'revoke_table_ref')
             ref_parts = revoke_table_ref.split('.', 2)
             revoke_table_project = ref_parts[0]
             revoke_table_name = ref_parts[1]
