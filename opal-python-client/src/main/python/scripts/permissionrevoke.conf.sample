@@ -9,11 +9,8 @@ user = administrator
 #password
 password = password
 
-#project to revoke permissions on
-project = project
-
-#name of table that contains permission revoke records
-table = permission_revoke
+#reference (<project>.<tablename>) to the table that contains permission revoke records
+revokeTableRef = revoketest3.permission_revoke
 
 #full path to the log file
 logfile = ~/permissionrevoke.log
