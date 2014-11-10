@@ -1,4 +1,4 @@
-# SAMPLE fileupload.conf
+# SAMPLE permissionrevoke.conf
 
 [main]
 #url to the opal server

@@ -3,17 +3,12 @@
 from __future__ import print_function, division
 
 import sys, os, errno
-import re
 import logging
 import subprocess
 import json
 import time
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
-import csv
 from urllib import quote_plus
-import shutil
-from StringIO import StringIO
-from os import path, listdir
 from os.path import expanduser, isfile
 
 verbose = '-v' in sys.argv
@@ -32,7 +27,7 @@ def setup():
             config.readfp(conf)
 
             url = config.get('main', 'url')
-            projects = config.get('main', 'projects').split(',')
+            projects = [p.strip() for p in config.get('main', 'projects').split(',')]
             revoke_table_name = config.get('main', 'revoke_table')
             logfile = expanduser(config.get('main', 'logfile'))
 
@@ -72,9 +67,6 @@ def configure_logging():
     logging.getLogger().addHandler(stderrhandler)
 
 
-MAX_URL_SIZE = 2000
-
-
 def u(it):
     """url-encode string/unicode"""
     return quote_plus(str(it))
@@ -84,120 +76,86 @@ def u(it):
 class KnownError (Exception):
     pass
 
-#Returns a string representation of a subject (principal + type)
-def get_subject_key(principal, type):
-    return principal + '/' + type
-
 #we don' want to mess up with administrator permissions, we exclude it when needed
-admSubject = get_subject_key('administrator', 'USER')
+administrator_subject = ('administrator', 'USER')
 
-class RevokeRow:
+def revoke(subject, project, table):
+    principal, type = subject
+    logging.info("Revoking permissions for {0} '{1}' on '{2}.{3}'".format(
+        type.lower(), principal, project, table))
 
-    def __init__(self, values_dict):
-        self.type = values_dict['type']
-        self.principal = values_dict['principal']
-        self.expiration_date = values_dict['expiration_date']
-        self.subject = get_subject_key(self.principal, self.type)
+    url = '/project/{0}/permissions/table/{1}?type={2}&principal={3}'.format(
+        u(project), u(table), u(type), u(principal))
 
-    def process(self, project, table):
-        table_ref = '{0}.{1}'.format(project, table)
-        logging.info('Revoking permissions for {0} \'{1}\' on \'{2}\' (expires in {3})'.format(
-            self.type.lower(), self.principal, table_ref, self.expiration_date))
+    run_rest_command(url, 'DELETE')
 
-        url = '/project/{0}/permissions/table/{1}?type={2}&principal={3}'.format(
-            u(project), u(table), self.type, u(self.principal))
+def revoke_rows_query(project):
+    "Returns the REST url for getting the revoke rows expired before today"
+    query = '[* TO {0}]'.format(time.strftime('%Y-%m-%d'))
+    queryparam = '{0}-{1}-expiration_date:{2}'.format(project, revoke_table_name, query)
+    return '/datasource/{0}/table/{1}/valueSets/_search?query={2}'.format(
+        u(project), u(revoke_table_name), u(queryparam))
 
-        run_rest_command(url, 'DELETE')
+def get_revoke_users(project, retrycount=0):
+    "Returns a list of user tuples to process, without any specific order"
+    try:
+        res = json.loads(run_rest_command(revoke_rows_query(project)))
+    except subprocess.CalledProcessError as e:
+        if '404 Not Found' in e.output:
+            raise KnownError('Permission revocation table {0} does not exist in project {1}!'.format(
+                revoke_table_name, project))
+        elif 'The requested URL returned error: 503 Service Unavailable' in e.output:
+            if retrycount > 0:
+                raise
+            create_index(project, revoke_table_name)
+            return get_revoke_users(project, retrycount+1)
 
-#Returns the REST url for getting the revoke rows expired before today
-def get_retrieve_revoke_rows_query(project):
-    today = time.strftime('%Y-%m-%d')
-    query = ':[* TO {0}]'.format(today)
-    return '/datasource/{0}/table/{1}/valueSets/_search?query={0}-{1}-{2}{3}'.format(
-        u(project), u(revoke_table_name), 'expiration_date', u(query))
-
-#Returns a dictionary with the index (0-based position) for each variable
-def get_var_indices(vars):
-    var_names = ['type', 'principal', 'expiration_date']
-    return dict((n, vars.index(n)) for n in var_names)
-
-#Returns a dictionary with revoke row variable values
-def get_row_values(var_indices, source_values):
-    result = dict()
-    for v in var_indices:
-        result[v] = source_values[var_indices[v]]['value']
-    return result
-
-#Returns a list of RevokeRows to process, without any specific order
-def get_revoke_rows(project):
-    list = []
-    res = json.loads(run_rest_command(get_retrieve_revoke_rows_query(project)))
+    import pdb; pdb.set_trace()
     vsets = res['valueSets']
-    var_indices = get_var_indices(vsets['variables'])
-    sourceList = vsets['valueSets']
+    revoke_users = []
+    for vs in vsets.get('valueSets', ()):
+        values_dict = dict(zip(vsets['variables'],
+                               (v['value'] for v in vs['values'])
+        ))
+        revoke_users.append((values_dict['principal'], values_dict['type']))
+    return revoke_users
 
-    for sourceRow in sourceList:
-        row_values = get_row_values(var_indices, sourceRow['values'])
-        list.append(RevokeRow(row_values))
+def create_index(project, table):
+    logging.info("Creating index for {0}.{1}".format(project, table))
+    run_rest_command('/datasource/{0}/table/{1}/index'.format(u(project), u(table)), method='PUT')
+    time.sleep(1)
+    status = json.loads(run_rest_command('/datasource/{0}/table/{1}/index'.format(u(project), u(table))))['status']
+    while status == 'IN_PROGRESS':
+        time.sleep(2)
+        status = json.loads(run_rest_command('/datasource/{0}/table/{1}/index'.format(u(project), u(table))))['status']
+    if status == 'OUTDATED':
+        logging.error('Creating index for {0}.{1} failed'.format(project, table))
+    else:
+        logging.info('Creating index for {0}.{1} finished, status: {2}'.format(project, table, status))
 
-    return list
 
-#Returns a list will all project tables
 def get_project_tables(project):
-    res = json.loads(run_rest_command('/datasource/{0}'.format(u(project))))
-    result = res['table']
-    #we dont want to mess with revoke table perms, so we remove it
-    #but we don' want to test if table is in the list: it MUST be there so it fails if not
-    result.remove(revoke_table_name)
-    return result
+    "Returns a list with all relevant project tables"
 
-#Returns a list of subject keys for the given table, except the administrator subject
+    tables = json.loads(run_rest_command('/datasource/{0}'.format(u(project))))['table']
+    #we dont want to mess with revoke table perms, so we remove it
+    if revoke_table_name in tables: tables.remove(revoke_table_name)
+    return tables
+
 def get_table_subjects(project, table):
+    "Returns a list of subject keys for the given table, except the administrator subject"
     res = json.loads(run_rest_command('/project/{0}/permissions/table/{1}'.format(
         u(project), u(table))))
 
-    result = []
-    for e in res:
-        subj = e['subject']
-        key = get_subject_key(subj['principal'], subj['type'])
-        result.append(key)
+    return [(e['subject']['principal'], e['subject']['type']) for e in res if e != administrator_subject]
 
-    if admSubject in result:
-        result.remove(admSubject) #remove the administrator subject
-    return result
+def get_tables_subjects_map(project):
+    "Returns a dictionary of table to list of existing subjects"
+    tables = json.loads(run_rest_command('/datasource/{0}'.format(u(project))))['table']
+    #we dont want to mess with revoke table perms, so we remove it
+    if revoke_table_name in tables: tables.remove(revoke_table_name)
 
-#Returns a dictionary of table to list of existing subjects
-def get_all_tables_subjects(project):
-    all_tables = get_project_tables(project)
-    return dict((t, get_table_subjects(project, t)) for t in all_tables)
-
-def run_rest_command_params(url, params, method, progresscallback=lambda: None):
-    """
-    Call a rest url with the list of parameters. If there are too many parameters to fit in a single request,
-    split them up into multiple requests.
-
-    If the list of parameters is empty, no request will be made.
-    """
-    # Sending a request with too many parameters results in an error 413 FULL HEAD,
-
-    url += '?'
-    urlwriter = StringIO()
-    urlwriter.write(url)
-
-    def send():
-        # if no parameters, return
-        if urlwriter.len == len(url): return
-        # strip off last '&'
-        run_rest_command(urlwriter.getvalue()[:-1], method=method)
-        urlwriter.seek(len(url)); urlwriter.truncate()
-        progresscallback()
-
-    for param in params:
-        if urlwriter.len + len(param) > MAX_URL_SIZE:
-            send()
-        urlwriter.write(param+'&')
-    send()
-
+    return {t: get_table_subjects(project, t) for t in tables}
 
 def run_rest_command(url, method=None):
     m = []
@@ -217,13 +175,13 @@ def run_command(cmd):
         if retcode != 0:
             logging.log(LOGINFO, 'subcommand exited with return code {0}: {1}'.format(
                 retcode, limit_length(' '.join(hide_password(cmd)))))
-            if '401 Unauthorized' in output:
+            if '401 Unauthorized' in out:
                 raise KnownError("Authorization failed, make sure your username and password are correct")
             if 'Could not resolve host' in output:
                 raise KnownError("Could not resolve hostname: "+url)
-            err = subprocess.CalledProcessError(retcode, hide_password(cmd))
-            err.output = output
-            raise err
+            error = subprocess.CalledProcessError(retcode, hide_password(cmd))
+            error.output = output
+            raise error
         return out
     except:
         if process:
@@ -259,28 +217,28 @@ def handle_exception(e):
     logging.debug(e, exc_info=True)
 
 def process_project(project):
-    #gets revoke rows
-    rows = get_revoke_rows(project)
-    #get table subjects
-    table_subjects = get_all_tables_subjects(project)
+    revoke_users = get_revoke_users(project)
+    table_subjects = get_tables_subjects_map(project)
 
-    #for every table..
     for table, subjects in table_subjects.iteritems():
-        #for every RevokeRow..
-        for r in rows:
-            if r.subject in subjects:
-                r.process(project, table) #process row if it matches one of the current subjects
+        for r in revoke_users:
+            if r in subjects:
+                revoke(r, project, table)
 
 def main():
     retcode = 0
     try:
         #for every project
         for project in projects:
-            process_project(project)
+            try:
+                process_project(project)
+            except KnownError as e:
+                handle_exception(e)
+                retcode |= 1
 
     except Exception as e:
         handle_exception(e)
-        retcode |= 1
+        retcode |= 2
         
     sys.exit(retcode)
     
