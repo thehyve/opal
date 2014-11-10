@@ -24,7 +24,7 @@ quiet = '-q' in sys.argv
 CONFIGFILE = expanduser('~/.opal/permissionrevoke.conf')
 
 def setup():
-    global url, revoke_table_project, revoke_table_name, logfile, auth_params
+    global url, projects, revoke_table, revoke_table_name, logfile, auth_params
 
     config = ConfigParser()
     try:
@@ -32,10 +32,8 @@ def setup():
             config.readfp(conf)
 
             url = config.get('main', 'url')
-            revoke_table_ref = config.get('main', 'revoke_table_ref')
-            ref_parts = revoke_table_ref.split('.', 2)
-            revoke_table_project = ref_parts[0]
-            revoke_table_name = ref_parts[1]
+            projects = config.get('main', 'projects').split(',')
+            revoke_table_name = config.get('main', 'revoke_table')
             logfile = expanduser(config.get('main', 'logfile'))
 
     except IOError as e:
@@ -96,32 +94,31 @@ admSubject = get_subject_key('administrator', 'USER')
 class RevokeRow:
 
     def __init__(self, values_dict):
-        self.project = values_dict['project']
         self.type = values_dict['type']
         self.principal = values_dict['principal']
         self.expiration_date = values_dict['expiration_date']
         self.subject = get_subject_key(self.principal, self.type)
 
-    def process(self, table):
-        table_ref = '{0}.{1}'.format(self.project, table)
+    def process(self, project, table):
+        table_ref = '{0}.{1}'.format(project, table)
         logging.info('Revoking permissions for {0} \'{1}\' on \'{2}\' (expires in {3})'.format(
             self.type.lower(), self.principal, table_ref, self.expiration_date))
 
         url = '/project/{0}/permissions/table/{1}?type={2}&principal={3}'.format(
-            u(self.project), u(table), self.type, u(self.principal))
+            u(project), u(table), self.type, u(self.principal))
 
         run_rest_command(url, 'DELETE')
 
 #Returns the REST url for getting the revoke rows expired before today
-def get_retrieve_revoke_rows_query():
+def get_retrieve_revoke_rows_query(project):
     today = time.strftime('%Y-%m-%d')
     query = ':[* TO {0}]'.format(today)
     return '/datasource/{0}/table/{1}/valueSets/_search?query={0}-{1}-{2}{3}'.format(
-        u(revoke_table_project), u(revoke_table_name), 'expiration_date', u(query))
+        u(project), u(revoke_table_name), 'expiration_date', u(query))
 
 #Returns a dictionary with the index (0-based position) for each variable
 def get_var_indices(vars):
-    var_names = ['project', 'type', 'principal', 'expiration_date']
+    var_names = ['type', 'principal', 'expiration_date']
     return dict((n, vars.index(n)) for n in var_names)
 
 #Returns a dictionary with revoke row variable values
@@ -131,34 +128,27 @@ def get_row_values(var_indices, source_values):
         result[v] = source_values[var_indices[v]]['value']
     return result
 
-#Returns a dict of project -> list[RevokeRow] to process, without any specific order
-def get_revoke_rows():
-    result = dict()
-    res = json.loads(run_rest_command(get_retrieve_revoke_rows_query()))
+#Returns a list of RevokeRows to process, without any specific order
+def get_revoke_rows(project):
+    list = []
+    res = json.loads(run_rest_command(get_retrieve_revoke_rows_query(project)))
     vsets = res['valueSets']
     var_indices = get_var_indices(vsets['variables'])
     sourceList = vsets['valueSets']
 
     for sourceRow in sourceList:
         row_values = get_row_values(var_indices, sourceRow['values'])
-        row = RevokeRow(row_values)
-        list = []
-        #if (row.project not in result.k)
-        if (result.has_key(row.project)):
-            list = result[row.project]
-        else:
-            result[row.project] = list
+        list.append(RevokeRow(row_values))
 
-        list.append(row)
-
-    return result
+    return list
 
 #Returns a list will all project tables
 def get_project_tables(project):
     res = json.loads(run_rest_command('/datasource/{0}'.format(u(project))))
     result = res['table']
-    if (project == revoke_table_project):
-        result.remove(revoke_table_name) #we dont want to mess with revoke table perms
+    #we dont want to mess with revoke table perms, so we remove it
+    #but we don' want to test if table is in the list: it MUST be there so it fails if not
+    result.remove(revoke_table_name)
     return result
 
 #Returns a list of subject keys for the given table, except the administrator subject
@@ -268,7 +258,9 @@ def handle_exception(e):
         print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
     logging.debug(e, exc_info=True)
 
-def process_project(project, rows):
+def process_project(project):
+    #gets revoke rows
+    rows = get_revoke_rows(project)
     #get table subjects
     table_subjects = get_all_tables_subjects(project)
 
@@ -277,17 +269,14 @@ def process_project(project, rows):
         #for every RevokeRow..
         for r in rows:
             if r.subject in subjects:
-                r.process(table) #process it if it matches one of the current subjects
+                r.process(project, table) #process row if it matches one of the current subjects
 
 def main():
     retcode = 0
     try:
-        #get all rows from revoke table that have expiration date in the past
-        all_rows = get_revoke_rows()
-
         #for every project
-        for project, rows in all_rows.iteritems():
-            process_project(project, rows)
+        for project in projects:
+            process_project(project)
 
     except Exception as e:
         handle_exception(e)
