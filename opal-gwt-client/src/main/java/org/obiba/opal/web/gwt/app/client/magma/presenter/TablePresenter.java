@@ -190,6 +190,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
   protected void onBind() {
     super.onBind();
     setInSlot(Display.Slots.Values, valuesTablePresenter);
+    setInSlot(Display.Slots.Validation, tableValidationPresenter);
     addEventHandlers();
   }
 
