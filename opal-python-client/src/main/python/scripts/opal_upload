@@ -9,6 +9,7 @@ import time
 import csv
 import shutil
 from os import path, listdir
+from cached_property import cached_property
 from opal_tools_lib import *
 
 verbose = '-v' in sys.argv
@@ -38,8 +39,11 @@ def setup():
             raise KnownError(
                 'Configureation file error: done = {0}, should be one of "move", "delete" or "none"'.format(done))
 
-        if not done_folder.endswith('/'):
-            done_folder += '/'
+        if done == 'move':
+            if not done_folder.endswith('/'):
+                done_folder += '/'
+            if not path.isdir(done_folder):
+                raise KnownError("done_folder '{0}' does not exist".format(done_folder))
 
 
 class FileNamePatternException (KnownError):
@@ -49,6 +53,7 @@ class OpalFile:
 
     reindex_tables = []
     operations = ['update', 'delete', 'replace']
+    binary_files = set()
 
     # Retain the order in which the files were processed, but only reindex each project once.
     @classmethod
@@ -57,10 +62,17 @@ class OpalFile:
         run_rest_command_params('/indexes', ('table='+u(t) for t in cls.reindex_tables), 'PUT')
         del cls.reindex_tables[:]
 
+    @classmethod
+    def cleanup_binaries(cls):
+        if not cls.binary_files:
+            return
+        logging.info("Cleaning up binary files")
+        cleanup(cls.binary_files)
+        cls.binary_files.clear()
+
 
     def __init__(self, filename):
         self.name = filename
-        self._entity_type = None
         # filename should be in the format <timestamp>.<project_name>.<table_name>.<operation>.csv
         # example: 20140503140523.mdsantwerp.lifelines.update.csv
         match = re.match(r'^([^\.]+)\.([^\.]+)\.([^\.]+)\.([^\.]+)(.*)\.csv$', filename)
@@ -73,8 +85,23 @@ class OpalFile:
                 'Valid operations: update, delete, replace'.format(filename))
         self.path = path.join(src_folder, filename)
 
-    def table_reference(self):
+    @property
+    def tableref(self):
         return self.project + '.' + self.table
+
+    @cached_property
+    def entity_type(self):
+        logging.log(LOGINFO, 'loading entity type for table {0}'.format(self.tableref))
+        res = json.loads(run_rest_command(
+            '/datasource/{0}/table/{1}'.format(u(self.project), u(self.table))))
+        return res['entityType']
+
+    @cached_property
+    def variables(self):
+        logging.log(LOGINFO, 'loading variables for table {}'.format(self.tableref))
+        return json.loads(run_rest_command(
+            '/datasource/{}/table/{}/variables'.format(u(self.project), u(self.table))))
+
 
     # processes this file
     def process(self):
@@ -86,7 +113,7 @@ class OpalFile:
 
         getattr(self, self.operation)()
 
-        getattr(self, 'done_'+done)()
+        cleanup([self.name], remove_from_opal= self.operation != 'delete')
 
         logging.info('finished processing {0} in {1:.3f} seconds'.format(self.name, time.time() - start_time))
 
@@ -96,7 +123,12 @@ class OpalFile:
             self.do_import()
         finally:
             self.schedule_reindex()
-            self.do_remove_uploaded()
+
+    def replace(self):
+        self.do_upload()
+        self.do_truncate()
+        self.schedule_reindex()
+        self.do_import()
 
     def delete(self):
         # Delete ids are sent as url parameters. Sending a too large url results in an error 413 FULL HEAD,
@@ -130,30 +162,47 @@ class OpalFile:
         for l in reader:
             yield l[0]
 
-    def replace(self):
-        self.do_upload()
-        self.do_truncate()
-        self.schedule_reindex()
-        self.do_import()
-        self.do_remove_uploaded()
-
     def do_truncate(self):
-        logging.info('Truncating table {0}.{1}'.format(self.project, self.table))
+        logging.info('Truncating table {}'.format(self.tableref))
         run_rest_command(
             '/datasource/{0}/table/{1}/valueSets'.format(u(self.project), u(self.table)),
             method='DELETE')
 
-    @property
-    def entity_type(self):
-        if not self._entity_type:
-            logging.log(LOGINFO, 'loading entity type for table {0}'.format(self.table))
-            res = json.loads(run_rest_command(
-                '/datasource/{0}/table/{1}'.format(u(self.project), u(self.table))))
-            self._entity_type = res['entityType']
-        return self._entity_type
-
     def do_upload(self):
-        return upload_file(self.path, opal_folder)
+        binary_vars = [v['name'] for v in self.variables if v['valueType'] == 'binary']
+        if binary_vars:
+            self.do_upload_blobs(binary_vars)
+
+        upload_file(self.path, opal_folder)
+
+    def do_upload_blobs(self, binary_vars):
+        logging.info("Uploading binary blobs for {}".format(self.name))
+        with open(self.path) as csvfile:
+            reader = csv.reader(csvfile)
+            header = reader.next()
+            binary_columns = [header.index(var) for var in binary_vars if var in header]
+            if not binary_columns:
+                return
+            max_bin = max(binary_columns)
+            for line in reader:
+                if len(line) <= max_bin:
+                    raise KnownError("No value found for variable '{}' while trying to process {}".format(
+                        header[max_bin], self.name))
+                for idx in binary_columns:
+                    blob = line[idx]
+                    # Don't re-upload a file if it was already uploaded
+                    if blob in self.binary_files:
+                        continue
+                    src = path.join(src_folder, blob)
+                    try:
+                        upload_file(src, opal_folder)
+                        self.binary_files.add(blob)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode == 2 and r"couldn\'t open file" in e.output:
+                            raise KnownError("File not found: '{}', specified as binary value for variable '{}'"
+                                             " for id '{}' in {}".format(
+                                src, header[idx], line[0], self.name))
+                        raise
 
     def do_import(self):
         # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
@@ -188,38 +237,49 @@ class OpalFile:
             raise Exception('Import job failed: {0}\nJob messages:\n{1}'.format(
                 self.name, '\n'.join('* '+m['msg'].strip() for m in result['messages'])))
 
-    def do_remove_uploaded(self):
-        # opal file -o <url> -u administrator -p password --delete /data_import/sample.csv
-        remove_cmd = ['opal', 'file'] + auth_params + ['--delete', opal_folder + '/' + self.name, '-f']
-        run_command(remove_cmd)
-
     def schedule_reindex(self):
         if self.project not in self.reindex_tables:
-            self.reindex_tables.append(self.table_reference())
+            self.reindex_tables.append(self.tableref)
 
-    def done_delete(self):
-        logging.info('deleting {0}'.format(self.path))
-        os.remove(self.path)
 
-    def done_move(self):
-        if not path.isdir(done_folder):
-            raise KnownError("done_folder '{0}' does not exist".format(done_folder))
-        try:
-            destpath = path.join(done_folder, self.name)
-            if path.exists(destpath):
-                logging.warn('Destination {0} exists, attempting to overwrite'.format(destpath))
-                os.remove(destpath)
-        except OSError as e:
-            logging.error(e)
-            logging.log(LOGINFO, e, exc_info=True)
-        logging.info('moving {0} to {1}'.format(self.path, done_folder))
-        try:
-            shutil.move(self.path, done_folder)
-        except OSError as e:
-            raise KnownError("Cannot move file to done_folder: "+str(e))
+def cleanup(files, remove_from_opal=True):
+    for file in files:
+        # remove file from opal file system
+        if remove_from_opal:
+            delete_opal_file(file)
+        globals()['cleanup_'+done](file)
 
-    def done_none(self):
-        pass
+def cleanup_move(file):
+    # Remove local target if it exists
+    src_path = path.join(src_folder, file)
+    try:
+        destpath = path.join(done_folder, file)
+        if path.exists(destpath):
+            logging.warn('Destination {0} exists, attempting to overwrite'.format(destpath))
+            os.remove(destpath)
+    except OSError as e:
+        logging.error(e)
+        logging.log(LOGINFO, e, exc_info=True)
+
+    # Move local file to done folder
+    logging.info('moving {0} to {1}'.format(src_path, done_folder))
+    try:
+        shutil.move(file, done_folder)
+    except OSError as e:
+        raise KnownError("Cannot move file to done_folder: "+str(e))
+
+def cleanup_delete(file):
+    logging.info('deleting {0}'.format(file))
+    os.remove(file)
+
+def cleanup_none(file):
+    pass
+
+def delete_opal_file(file):
+    "Remove file from opal filesystem /data_import"
+    # opal file -o <url> -u administrator -p password --delete /data_import/sample.csv
+    remove_cmd = ['opal', 'file'] + auth_params + ['--delete', opal_folder + '/' + file, '-f']
+    run_command(remove_cmd)
 
 
 def filesize(file):
@@ -280,21 +340,27 @@ def main():
     try:
         files = get_files()
         if not files:
-            logging.warn('Source directory is empty, nothing to do')
+            logging.warn('No data files found, nothing to do')
             sys.exit(0)
         for file in files:
             file.process()
     except Exception as e:
         handle_exception(e)
         retcode |= 1
-        
+
     # We try to reindex even if there was an error in one of the uploads, to make sure other changed tables are up to date.
     try:
         OpalFile.reindex_all()
-        logging.info('done')
     except Exception as e:
         handle_exception(e)
         retcode |= 2
+
+    try:
+        OpalFile.cleanup_binaries()
+        logging.info('done')
+    except Exception as e:
+        handle_exception(e)
+        retcode |= 4
 
     sys.exit(retcode)
     

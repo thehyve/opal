@@ -29,7 +29,7 @@ MODULES = ['opal_tools_lib']
 PACKAGES = ['opal', 'opal.protobuf', 'opal.security']
 PACKAGES_DIR = {'': 'bin', 'opal': 'bin/opal'}
 SCRIPTS = ['bin/scripts/opal', 'bin/scripts/opal_upload', 'bin/scripts/opal_permission_revoke']
-INSTALL_REQUIRES = ['protobuf >= 2.4', 'pycurl']
+INSTALL_REQUIRES = ['protobuf >= 2.4', 'pycurl', 'cached-property']
 
 setup(
     name=PACKAGE_NAME,
