@@ -4,18 +4,12 @@ from __future__ import print_function, division
 
 import sys, os, errno
 import re
-import logging
-import subprocess
 import json
 import time
-from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 import csv
-from urllib import quote_plus
 import shutil
-from StringIO import StringIO
 from os import path, listdir
-from os.path import expanduser, isfile
-from cmi_tools_lib import *
+from opal_tools_lib import *
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
@@ -23,8 +17,33 @@ quiet = '-q' in sys.argv
 
 ## Parse config file ##
 
-CONFIGFILE = expanduser('~/.opal/fileupload.conf')
+CONFIGFILE = '~/.opal/fileupload.conf'
 
+def setup():
+    global file_type, done, src_folder, done_folder, opal_folder
+
+    with setup_loader(CONFIGFILE) as config:
+
+        file_type = config.get('main', 'file_type')
+        done = config.get('main', 'done')
+        src_folder = expanduser(config.get('main', 'src_folder'))
+        done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
+        opal_folder = config.get('main', 'opal_folder')
+
+        if file_type != 'csv':
+            raise KnownError(
+                'Configuration file error: file_type = {0}. File types other than "csv" are not currently '
+                'supported'.format(file_type))
+        if done not in ('move', 'delete', 'none'):
+            raise KnownError(
+                'Configureation file error: done = {0}, should be one of "move", "delete" or "none"'.format(done))
+
+        if not done_folder.endswith('/'):
+            done_folder += '/'
+
+
+class FileNamePatternException (KnownError):
+    pass
 
 class OpalFile:
 
@@ -42,15 +61,16 @@ class OpalFile:
     def __init__(self, filename):
         self.name = filename
         self._entity_type = None
-        # filename should be in the format <timestamp>_<project_name>_<table_name>_<operation>.csv
-        # example: 20140503140523_mdsantwerp_lifelines_update.csv
-        match = re.match(r'^([^_]+)_([^_]+)_([^_]+)_([^_]+)(.*)\.csv$', filename)
+        # filename should be in the format <timestamp>.<project_name>.<table_name>.<operation>.csv
+        # example: 20140503140523.mdsantwerp.lifelines.update.csv
+        match = re.match(r'^([^\.]+)\.([^\.]+)\.([^\.]+)\.([^\.]+)(.*)\.csv$', filename)
         if match:
             self.timestamp, self.project, self.table, self.operation = match.groups()[0:4]
         if not match or self.operation not in self.operations:
-            raise Exception('File name {0} does not match expected format: '
-                            '<timestamp>_<project_name>_<table_name>_<operation>.csv\n'
-                            'Valid operations: update, delete, replace'.format(filename))
+            raise FileNamePatternException(
+                'File name {0} does not match expected format: '
+                '<timestamp>.<project_name>.<table_name>.<operation>.csv\n'
+                'Valid operations: update, delete, replace'.format(filename))
         self.path = path.join(src_folder, filename)
 
     def table_reference(self):
@@ -133,17 +153,8 @@ class OpalFile:
         return self._entity_type
 
     def do_upload(self):
-        #opal file -o <url> -u administrator -p password -up sample.csv /data_import
-        #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
-        logging.info('Uploading '+self.path)
-        upload_cmd = ['opal', 'file'] + auth_params + ['-up', self.path, opal_folder]
-        try:
-            run_command(upload_cmd)
-        except subprocess.CalledProcessError as e:
-            if '404 Not Found' in e.output:
-                raise KnownError("Folder '{0}' does not exist on the server".format(opal_folder))
-            raise
-        
+        return upload_file(self.path, opal_folder)
+
     def do_import(self):
         # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
         #      -pa <opalfs_self_path> -ty <entity_type> -t <table>
@@ -225,23 +236,44 @@ def filesize(file):
     return size
 
 
+def upload_file(src, opal_dest):
+    "Upload a file specified by src to opal in the opal_dest folder"
+    #opal file -o <url> -u administrator -p password -up sample.csv /data_import
+    #opal file -o http://localhost:8080 -sc server.crt -sk server.key -up sample.csv /data_import
+    logging.info('Uploading '+src)
+    upload_cmd = ['opal', 'file'] + auth_params + ['-up', src, opal_dest]
+    try:
+        run_command(upload_cmd)
+    except subprocess.CalledProcessError as e:
+        if '404 Not Found' in e.output:
+            raise KnownError("Folder '{0}' does not exist on the server".format(opal_dest))
+        raise
+
+
 # returns a list of ImportFile, ordered by date (oldest first)
 def get_files():
     list = []
     try:
-        files = listdir(src_folder)
+        files = get_all_files()
     except OSError as e:
         raise KnownError("Can not access src_folder: " + str(e))
     for f in files:
         fullname = path.join(src_folder, f)
         if isfile(fullname):
-            if f.endswith('.'+file_type):
+            try:
                 list.append(OpalFile(f))
-            else:
-                logging.log(LOGINFO, "Skipping file with wrong format {0}".format(f))
+            except FileNamePatternException:
+                logging.log(logging.DEBUG, "File {0} is not a table operation file, skipping".format(f))
 
     list.sort(key=lambda f: f.name.split('_', 1)[0])
     return list
+
+all_files = None
+def get_all_files():
+    global all_files
+    if all_files == None:
+        all_files = set(listdir(src_folder))
+    return all_files
 
 def main():
     retcode = 0

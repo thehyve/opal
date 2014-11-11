@@ -2,84 +2,30 @@
 
 from __future__ import print_function, division
 
-import sys, os, errno
-import logging
-import subprocess
 import json
 import time
-from ConfigParser import ConfigParser, NoSectionError, NoOptionError
-from urllib import quote_plus
-from os.path import expanduser, isfile
+from opal_tools_lib import *
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
 
-## Parse config file ##
-
-CONFIGFILE = expanduser('~/.opal/permissionrevoke.conf')
+CONFIGFILE = '~/.opal/permissionrevoke.conf'
 
 def setup():
     global url, projects, revoke_table, revoke_table_name, logfile, auth_params
 
-    config = ConfigParser()
-    try:
-        with open(CONFIGFILE) as conf:
-            config.readfp(conf)
+    with setup_loader(CONFIGFILE) as config:
+        projects = [p.strip() for p in config.get('main', 'projects').split(',')]
+        revoke_table_name = config.get('main', 'revoke_table')
+        logfile = expanduser(config.get('main', 'logfile'))
 
-            url = config.get('main', 'url')
-            projects = [p.strip() for p in config.get('main', 'projects').split(',')]
-            revoke_table_name = config.get('main', 'revoke_table')
-            logfile = expanduser(config.get('main', 'logfile'))
-
-    except IOError as e:
-        if e.errno == 2:
-            handle_exception(KnownError("Configuration file not found: "+CONFIGFILE))
-            sys.exit(1)
-        raise
-    except (NoSectionError, NoOptionError) as e:
-        handle_exception(KnownError("Error reading configuration file: "+str(e)))
-        sys.exit(1)
-
-    configure_logging()
-
-    auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
-
-## Configure logging ##
-
-# define an intermediate level for info that should by default be logged to the logfile but not to the command line
-LOGINFO = logging.INFO - 5
-logging.addLevelName(LOGINFO, 'LOGINFO')
-def configure_logging():
-    logging.getLogger().setLevel(logging.DEBUG)
-
-    logfilehandler = logging.FileHandler(logfile)
-    logfilehandler.setLevel(LOGINFO)
-    logfilehandler.setFormatter(logging.Formatter('%(levelname)-7s %(asctime)s: %(message)s'))
-    logging.getLogger().addHandler(logfilehandler)
-
-    stderrhandler = logging.StreamHandler()
-    stderrhandler.setLevel(logging.INFO)
-    if verbose:
-        stderrhandler.setLevel(logging.DEBUG)
-        logfilehandler.setLevel(logging.DEBUG)
-    if quiet:
-        stderrhandler.setLevel(logging.WARN)
-    logging.getLogger().addHandler(stderrhandler)
-
-
-def u(it):
-    """url-encode string/unicode"""
-    return quote_plus(str(it))
-
-# This exception indicates that this is a known error condition handled by the code, so no need to print stacktraces
-# and such.
-class KnownError (Exception):
-    pass
 
 #we don' want to mess up with administrator permissions, we exclude it when needed
 administrator_subject = ('administrator', 'USER')
 
+
 def revoke(subject, project, table):
+    "Revoke access for subject to project.table. Subject is a tuple (name, type)."
     principal, type = subject
     logging.info("Revoking permissions for {0} '{1}' on '{2}.{3}'".format(
         type.lower(), principal, project, table))
@@ -89,12 +35,14 @@ def revoke(subject, project, table):
 
     run_rest_command(url, 'DELETE')
 
+
 def revoke_rows_query(project):
     "Returns the REST url for getting the revoke rows expired before today"
     query = '[* TO {0}]'.format(time.strftime('%Y-%m-%d'))
     queryparam = '{0}-{1}-expiration_date:{2}'.format(project, revoke_table_name, query)
     return '/datasource/{0}/table/{1}/valueSets/_search?query={2}'.format(
         u(project), u(revoke_table_name), u(queryparam))
+
 
 def get_revoke_users(project, retrycount=0):
     "Returns a list of user tuples to process, without any specific order"
@@ -110,7 +58,6 @@ def get_revoke_users(project, retrycount=0):
             create_index(project, revoke_table_name)
             return get_revoke_users(project, retrycount+1)
 
-    import pdb; pdb.set_trace()
     vsets = res['valueSets']
     revoke_users = []
     for vs in vsets.get('valueSets', ()):
@@ -119,6 +66,7 @@ def get_revoke_users(project, retrycount=0):
         ))
         revoke_users.append((values_dict['principal'], values_dict['type']))
     return revoke_users
+
 
 def create_index(project, table):
     logging.info("Creating index for {0}.{1}".format(project, table))
@@ -142,6 +90,7 @@ def get_project_tables(project):
     if revoke_table_name in tables: tables.remove(revoke_table_name)
     return tables
 
+
 def get_table_subjects(project, table):
     "Returns a list of subject keys for the given table, except the administrator subject"
     res = json.loads(run_rest_command('/project/{0}/permissions/table/{1}'.format(
@@ -157,66 +106,9 @@ def get_tables_subjects_map(project):
 
     return {t: get_table_subjects(project, t) for t in tables}
 
-def run_rest_command(url, method=None):
-    m = []
-    if method != None:
-        m = ['-m', method]
-    return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
-
-def run_command(cmd):
-    logging.log(LOGINFO, 'executing ' + ' '.join(hide_password(cmd)))
-    process = None
-    try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = process.communicate()
-        retcode = process.wait()
-        output = err+'\n'+out
-        logging.debug(output)
-        if retcode != 0:
-            logging.log(LOGINFO, 'subcommand exited with return code {0}: {1}'.format(
-                retcode, limit_length(' '.join(hide_password(cmd)))))
-            if '401 Unauthorized' in out:
-                raise KnownError("Authorization failed, make sure your username and password are correct")
-            if 'Could not resolve host' in output:
-                raise KnownError("Could not resolve hostname: "+url)
-            error = subprocess.CalledProcessError(retcode, hide_password(cmd))
-            error.output = output
-            raise error
-        return out
-    except:
-        if process:
-            if process.poll() is None:
-                process.kill()
-            process.wait()
-        raise
-
-def hide_password(cmd):
-    try:
-        password_idx = cmd.index('-p')
-        return cmd[:password_idx+1] + ['{password_not_logged}'] + cmd[password_idx+2:]
-    except ValueError:
-        return cmd
-
-def limit_length(msg, maxlen=1000, end=".....rest of message not shown...."):
-    if len(msg) > maxlen:
-        msg = msg[:1000-len(end)] + end
-    return msg
-
-def handle_exception(e):
-    if isinstance(e, KnownError):
-        logging.error('Error: ' + str(e))
-        return
-
-    msg = "Error: {0}: {1}".format(type(e).__name__, e)
-    if isinstance(e, subprocess.CalledProcessError):
-        msg += '\nCommand output: ' + e.output.rstrip()
-
-    logging.error(msg)
-    if not verbose:
-        print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
-    logging.debug(e, exc_info=True)
 
 def process_project(project):
+    revoke_count = 0
     revoke_users = get_revoke_users(project)
     table_subjects = get_tables_subjects_map(project)
 
@@ -224,17 +116,24 @@ def process_project(project):
         for r in revoke_users:
             if r in subjects:
                 revoke(r, project, table)
+                revoke_count += 1
+    return revoke_count
+
 
 def main():
     retcode = 0
+    count = 0
     try:
         #for every project
         for project in projects:
             try:
-                process_project(project)
+                count += process_project(project)
             except KnownError as e:
                 handle_exception(e)
                 retcode |= 1
+
+        if count == 0:
+            logging.info("No permissions to remove")
 
     except Exception as e:
         handle_exception(e)

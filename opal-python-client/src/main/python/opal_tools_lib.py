@@ -1,69 +1,61 @@
+# This file contains code that is shared between opal_upload and opal_permission_revoke. There is no real reason for
+# it being here except to prevent code duplication.
+
 from __future__ import print_function, division
 
-import sys, os, errno
-import re
+import sys
 import logging
 import subprocess
-import json
-import time
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
-import csv
 from urllib import quote_plus
-import shutil
 from StringIO import StringIO
-from os import path, listdir
 from os.path import expanduser, isfile
+import contextlib
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
 
 
-def setup():
-    global url, file_type, done, src_folder, done_folder, opal_folder, logfile, auth_params
+auth_params = []
+
+@contextlib.contextmanager
+def setup_loader(configfile):
+    """This context manager opens the config file, reads shared options and does error handling. Tool specific options
+    can be specified in the code block."""
+    global url, auth_params, logfile
 
     config = ConfigParser()
+    configfile = expanduser(configfile)
+
     try:
-        with open(CONFIGFILE) as conf:
+        with open(configfile) as conf:
             config.readfp(conf)
 
-            url = config.get('main', 'url')
-            file_type = config.get('main', 'file_type')
-            done = config.get('main', 'done')
-            src_folder = expanduser(config.get('main', 'src_folder'))
-            done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
-            opal_folder = config.get('main', 'opal_folder')
             logfile = expanduser(config.get('main', 'logfile'))
+            url = config.get('main', 'url')
+            if not url.startswith('https'):
+                raise KnownError("Opal url must be a secure (https) url. Found '{}'".format(url))
+            if config.has_option('main', 'use_certificate') and \
+                    config.getboolean('main', 'use_certificate'):
+                auth_params += ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
+            else:
+                auth_params += ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+
+            configure_logging()
+
+            yield config
 
     except IOError as e:
         if e.errno == 2:
-            handle_exception(KnownError("Configuration file not found: "+CONFIGFILE))
+            handle_exception(KnownError("Configuration file not found: "+configfile))
             sys.exit(1)
         raise
     except (NoSectionError, NoOptionError) as e:
         handle_exception(KnownError("Error reading configuration file: "+str(e)))
         sys.exit(1)
-
-
-    configure_logging()
-
-    if config.has_option('main', 'use_certificate') and \
-            config.getboolean('main', 'use_certificate'):
-        auth_params = ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
-    else:
-        auth_params = ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
-
-    if file_type != 'csv':
-        handle_exception(KnownError(
-            'Configuration file error: file_type = {0}. File types other than "csv" are not currently '
-            'supported'.format(file_type)))
+    except KnownError as e:
+        handle_exception(e)
         sys.exit(1)
-    if done not in ('move', 'delete', 'none'):
-        handle_exception(KnownError(
-            'Configureation file error: done = {0}, should be one of "move", "delete" or "none"'.format(done)))
-        sys.exit(1)
-
-    if not done_folder.endswith('/'):
-        done_folder += '/'
 
 
 ## Configure logging ##
@@ -152,9 +144,9 @@ def run_command(cmd):
                 raise KnownError("Authorization failed, make sure your username and password are correct")
             if 'Could not resolve host' in output:
                 raise KnownError("Could not resolve hostname: "+url)
-            err = subprocess.CalledProcessError(retcode, hide_password(cmd))
-            err.output = output
-            raise err
+            error = subprocess.CalledProcessError(retcode, hide_password(cmd))
+            error.output = output
+            raise error
         return out
     except:
         if process:
