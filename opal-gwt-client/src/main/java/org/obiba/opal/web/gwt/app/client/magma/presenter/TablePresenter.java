@@ -9,11 +9,23 @@
  ******************************************************************************/
 package org.obiba.opal.web.gwt.app.client.magma.presenter;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import com.google.common.base.Strings;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.JsArray;
+import com.google.gwt.core.client.JsArrayString;
+import com.google.gwt.core.client.JsonUtils;
+import com.google.gwt.http.client.Request;
+import com.google.gwt.http.client.Response;
+import com.google.gwt.user.cellview.client.ColumnSortEvent;
+import com.google.gwt.user.client.Timer;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
+import com.google.web.bindery.event.shared.EventBus;
+import com.google.web.bindery.event.shared.HandlerRegistration;
+import com.gwtplatform.mvp.client.HasUiHandlers;
+import com.gwtplatform.mvp.client.PresenterWidget;
+import com.gwtplatform.mvp.client.View;
+import com.gwtplatform.mvp.client.proxy.PlaceManager;
 import org.obiba.opal.web.gwt.app.client.administration.index.presenter.IndexPresenter;
 import org.obiba.opal.web.gwt.app.client.event.ConfirmationEvent;
 import org.obiba.opal.web.gwt.app.client.event.ConfirmationRequiredEvent;
@@ -42,12 +54,7 @@ import org.obiba.opal.web.gwt.app.client.presenter.ModalProvider;
 import org.obiba.opal.web.gwt.app.client.project.ProjectPlacesHelper;
 import org.obiba.opal.web.gwt.app.client.support.VariableDtos;
 import org.obiba.opal.web.gwt.app.client.support.VariablesFilter;
-import org.obiba.opal.web.gwt.rest.client.ResourceAuthorizationRequestBuilderFactory;
-import org.obiba.opal.web.gwt.rest.client.ResourceCallback;
-import org.obiba.opal.web.gwt.rest.client.ResourceRequestBuilderFactory;
-import org.obiba.opal.web.gwt.rest.client.ResponseCodeCallback;
-import org.obiba.opal.web.gwt.rest.client.UriBuilder;
-import org.obiba.opal.web.gwt.rest.client.UriBuilders;
+import org.obiba.opal.web.gwt.rest.client.*;
 import org.obiba.opal.web.gwt.rest.client.authorization.CompositeAuthorizer;
 import org.obiba.opal.web.gwt.rest.client.authorization.HasAuthorization;
 import org.obiba.opal.web.model.client.magma.TableDto;
@@ -57,28 +64,12 @@ import org.obiba.opal.web.model.client.opal.TableIndexStatusDto;
 import org.obiba.opal.web.model.client.opal.TableIndexationStatus;
 import org.obiba.opal.web.model.client.ws.ClientErrorDto;
 
-import com.google.common.base.Strings;
-import com.google.gwt.core.client.JsArray;
-import com.google.gwt.core.client.JsArrayString;
-import com.google.gwt.core.client.JsonUtils;
-import com.google.gwt.http.client.Request;
-import com.google.gwt.http.client.Response;
-import com.google.gwt.user.cellview.client.ColumnSortEvent;
-import com.google.gwt.user.client.Timer;
-import com.google.inject.Inject;
-import com.google.inject.Provider;
-import com.google.web.bindery.event.shared.EventBus;
-import com.google.web.bindery.event.shared.HandlerRegistration;
-import com.gwtplatform.mvp.client.HasUiHandlers;
-import com.gwtplatform.mvp.client.PresenterWidget;
-import com.gwtplatform.mvp.client.View;
-import com.gwtplatform.mvp.client.proxy.PlaceManager;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import static com.google.gwt.http.client.Response.SC_FORBIDDEN;
-import static com.google.gwt.http.client.Response.SC_INTERNAL_SERVER_ERROR;
-import static com.google.gwt.http.client.Response.SC_NOT_FOUND;
-import static com.google.gwt.http.client.Response.SC_OK;
-import static com.google.gwt.http.client.Response.SC_SERVICE_UNAVAILABLE;
+import static com.google.gwt.http.client.Response.*;
 
 public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     implements TableUiHandlers, TableSelectionChangeEvent.Handler {
@@ -115,6 +106,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
 
   private final ValuesTablePresenter valuesTablePresenter;
 
+  private final TableValidationPresenter tableValidationPresenter;
+
   private final ModalProvider<IndexPresenter> indexPresenter;
 
   private final Provider<ContingencyTablePresenter> crossVariableProvider;
@@ -142,7 +135,9 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
   @SuppressWarnings({ "ConstructorWithTooManyParameters", "PMD.ExcessiveParameterList" })
   @Inject
   public TablePresenter(Display display, EventBus eventBus, PlaceManager placeManager,
-      ValuesTablePresenter valuesTablePresenter, Provider<ContingencyTablePresenter> crossVariableProvider,
+      ValuesTablePresenter valuesTablePresenter,
+      TableValidationPresenter tableValidationPresenter,
+      Provider<ContingencyTablePresenter> crossVariableProvider,
       Provider<ResourcePermissionsPresenter> resourcePermissionsProvider, ModalProvider<IndexPresenter> indexPresenter,
       ModalProvider<VariablesToViewPresenter> variablesToViewProvider,
       ModalProvider<VariablePropertiesModalPresenter> variablePropertiesModalProvider,
@@ -152,11 +147,12 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
       ModalProvider<TablePropertiesModalPresenter> tablePropertiesModalProvider,
       ModalProvider<DataExportPresenter> dataExportModalProvider,
       ModalProvider<DataCopyPresenter> dataCopyModalProvider,
-      ModalProvider<VariableAttributeModalPresenter> attributeModalProvider, Translations translations,
-      TranslationMessages translationMessages) {
+      ModalProvider<VariableAttributeModalPresenter> attributeModalProvider,
+      Translations translations, TranslationMessages translationMessages) {
     super(eventBus, display);
     this.placeManager = placeManager;
     this.valuesTablePresenter = valuesTablePresenter;
+    this.tableValidationPresenter = tableValidationPresenter;
     this.resourcePermissionsProvider = resourcePermissionsProvider;
     this.translations = translations;
     this.translationMessages = translationMessages;
@@ -195,6 +191,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
   protected void onBind() {
     super.onBind();
     setInSlot(Display.Slots.Values, valuesTablePresenter);
+    setInSlot(Display.Slots.Validation, tableValidationPresenter);
     addEventHandlers();
   }
 
@@ -292,6 +289,10 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
             UriBuilders.PROJECT_PERMISSIONS_TABLE.create().build(table.getDatasourceName(), table.getName())) //
         .authorize(new CompositeAuthorizer(getView().getPermissionsAuthorizer(), new PermissionsUpdate())) //
         .post().send();
+
+      // validation: uses same permissions as values tab
+      ResourceAuthorizationRequestBuilderFactory.newBuilder().forResource(table.getLink() + "/valueSets").get()
+              .authorize(getView().getValidationAuthorizer()).send();
   }
 
   private void updateDisplay(final String datasourceName, final String tableName) {
@@ -354,6 +355,10 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     if(getView().isValuesTabSelected()) {
       valuesTablePresenter.setTable(tableDto);
       valuesTablePresenter.updateValuesDisplay("");
+    }
+
+    if(getView().isValidationTabSelected()) {
+      tableValidationPresenter.setTable(tableDto);
     }
 
     variableFilter = "";
@@ -442,6 +447,11 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
   public void onShowValues() {
     valuesTablePresenter.setTable(table);
     valuesTablePresenter.updateValuesDisplay(variableFilter);
+  }
+
+  @Override
+  public void onShowValidation() {
+      tableValidationPresenter.setTable(table);
   }
 
   @Override
@@ -683,7 +693,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     }
   }
 
-  private final class VariableSortHandler implements ColumnSortEvent.Handler {
+    private final class VariableSortHandler implements ColumnSortEvent.Handler {
 
     @Override
     public void onColumnSort(ColumnSortEvent event) {
@@ -824,7 +834,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
 
 
     enum Slots {
-      Permissions, Values, ContingencyTable
+      Permissions, Values, ContingencyTable, Validation
     }
 
     void beforeRenderRows();
@@ -865,6 +875,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
 
     boolean isValuesTabSelected();
 
+    boolean isValidationTabSelected();
+
     void setIndexStatusVisible(boolean b);
 
     void setIndexStatusAlert(TableIndexStatusDto statusDto);
@@ -882,6 +894,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     void hideContingencyTable();
 
     void setVariableFilter(String variableFilter);
+
+    HasAuthorization getValidationAuthorizer();
   }
 
   private class RemoveRunnable implements Runnable {

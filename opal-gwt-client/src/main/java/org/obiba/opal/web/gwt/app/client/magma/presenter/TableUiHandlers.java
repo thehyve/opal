@@ -49,4 +49,7 @@ public interface TableUiHandlers extends UiHandlers {
   void onDeleteAttribute(List<VariableDto> selectedItems);
 
   void onVariablesFilterUpdate(String filter);
+
+  void onShowValidation();
+
 }

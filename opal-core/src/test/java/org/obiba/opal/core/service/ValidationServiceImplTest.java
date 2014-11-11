@@ -1,5 +1,6 @@
 package org.obiba.opal.core.service;
 
+import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -8,14 +9,10 @@ import org.obiba.magma.support.StaticValueTable;
 import org.obiba.opal.core.service.ValidationService.ValidationResult;
 import org.obiba.opal.core.service.ValidationService.ValidationTask;
 import org.obiba.opal.core.service.validation.ValidatorFactory;
-import org.obiba.opal.core.service.validation.VocabularyValidator;
-import org.obiba.opal.core.support.MessageLogger;
+import org.obiba.opal.core.service.validation.VocabularyConstraint;
 import org.obiba.opal.core.support.SystemOutMessageLogger;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by carlos on 8/5/14.
@@ -49,8 +46,7 @@ public class ValidationServiceImplTest {
     @Test
     public void testValidateWithVocabularyFailure() throws Exception {
         ValueTable table = createTable(INVALID_CODE, MagmaHelper.createVocabularyVariable());
-        ValidationTask task = validationService.createValidationTask(table, new SystemOutMessageLogger());
-        ValidationResult result = task.validate();
+        ValidationResult result = validationService.validateNoTransaction(table, new SystemOutMessageLogger());
 
 		Assert.assertTrue("should have failures", result.hasFailures());
 		Set<List<String>> pairs = result.getFailurePairs();
@@ -58,7 +54,7 @@ public class ValidationServiceImplTest {
 		List<String> pair = pairs.iterator().next();
 		Assert.assertEquals("wrong length", 2, pair.size());
 		Assert.assertEquals("wrong variable", MagmaHelper.VOCAB_VARIABLE, pair.get(0));
-		Assert.assertEquals("wrong rule", VocabularyValidator.TYPE, pair.get(1));
+		Assert.assertEquals("wrong rule", VocabularyConstraint.TYPE, pair.get(1));
 		Set<Value> failedValues = result.getFailedValues(pair.get(0), pair.get(1));
 		Assert.assertEquals("wrong count", 1, failedValues.size());
 		Assert.assertEquals("value mismatch", INVALID_CODE, failedValues.iterator().next().toString());
@@ -67,10 +63,11 @@ public class ValidationServiceImplTest {
     @Test
     public void testValidateWithVocabularyNoFailures() throws Exception {
     	ValueTable table = createTable(VALID_CODE, MagmaHelper.createVocabularyVariable());
-        ValidationTask task = validationService.createValidationTask(table, new SystemOutMessageLogger());
-        ValidationResult result = task.validate();
 
-		Assert.assertFalse("should have no failures", result.hasFailures());
+        ValidationResult result = validationService.validateNoTransaction(table, new SystemOutMessageLogger());
+        checkVariableRules(result);
+
+        Assert.assertFalse("should have no failures", result.hasFailures());
     }
 
     @Test
@@ -96,28 +93,18 @@ public class ValidationServiceImplTest {
         Assert.assertFalse("should be invalid", valid);
     }
 
+    private void checkVariableRules(ValidationResult result) {
+        Map<String, Set<String>> map =  result.getVariableRules();
+        Assert.assertEquals("wrong rule map count", 1, map.size());
+        Set<String> rules = map.get(MagmaHelper.VOCAB_VARIABLE);
+        Assert.assertNotNull("should have rules", rules);
+        Set<String> expectedRules = ImmutableSet.of(VocabularyConstraint.TYPE);
+        Assert.assertEquals("rules mismatch", expectedRules, rules);
+    }
+
     private boolean isValid(ValueTable valueTable) {
-        ValidationTask task = validationService.createValidationTask(valueTable, new SystemOutMessageLogger());
-
-        List<String> variables = task.getVariableNames();
-
-        if (variables.isEmpty()) {
-            return true; //no variables under validation
-        }
-
-        Iterator<ValueSet> valueSets = valueTable.getValueSets().iterator();
-        while (valueSets.hasNext()) {
-            ValueSet vset = valueSets.next();
-
-            for (String varName: variables) {
-                Variable var = valueTable.getVariable(varName);
-                Value value = valueTable.getValue(var, vset);
-                if (!task.isValid(var, value)) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        ValidationResult vd = validationService.validateNoTransaction(valueTable, new SystemOutMessageLogger());
+        return vd == null || !vd.hasFailures();
     }
 
 }

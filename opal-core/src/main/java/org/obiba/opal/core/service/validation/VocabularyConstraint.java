@@ -5,22 +5,22 @@ import org.obiba.magma.Value;
 import java.util.Set;
 
 /**
- * Impl of DataValidator that checks for existence of vocabulary codes.
+ * Impl of DataConstraint that checks for existence in vocabulary codes.
  */
-public class VocabularyValidator implements DataValidator {
+public class VocabularyConstraint implements DataConstraint {
 
 	public static final String TYPE = "Vocabulary";
 	
-    private final String name;
+    private final String source;
     private final Set<String> codes;
 
-    public VocabularyValidator(String name, Set<String> codes) {
-        this.name = name;
+    public VocabularyConstraint(String source, Set<String> codes) {
+        this.source = source;
         this.codes = codes;
     }
 
     @Override
-    public boolean isValid(Value value) {
+    public final boolean isValid(Value value) {
         if (value.isNull()) {
             return true;
         }
@@ -32,14 +32,14 @@ public class VocabularyValidator implements DataValidator {
 		return TYPE;
 	}
 
-	@Override
-    public String getName() {
-        return name;
+
+    @Override
+    public final String getMessage() {
+        return String.format("Not found in %s", source);
     }
 
     @Override
     public String toString() {
-        return String.format("%s[%s]", getClass().getSimpleName(), getName());
+        return String.format("%s[%s]", getType(), source);
     }
-
 }

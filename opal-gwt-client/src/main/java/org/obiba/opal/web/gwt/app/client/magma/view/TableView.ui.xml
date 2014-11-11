@@ -269,6 +269,10 @@
         <g:SimplePanel ui:field="permissionsPanel"/>
       </b:Tab>
 
+      <b:Tab heading="Validation" ui:field="validationTab">
+        <g:SimplePanel ui:field="validationPanel"/>
+      </b:Tab>
+
     </b:TabPanel>
 
   </g:FlowPanel>

@@ -16,6 +16,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.obiba.opal.shell.commands.Command;
+import org.obiba.opal.shell.commands.ExtendedCommand;
 import org.obiba.opal.web.model.Commands.CommandStateDto.Status;
 import org.obiba.opal.web.model.Commands.Message;
 import org.slf4j.Logger;
@@ -170,6 +171,11 @@ public class CommandJob implements OpalShell, Runnable {
 
   public void setId(Integer id) {
     this.id = id;
+
+    if (command instanceof ExtendedCommand) {
+        //pass the job id to the command
+        ((ExtendedCommand) command).setJobId(id);
+    }
   }
 
   public String getName() {

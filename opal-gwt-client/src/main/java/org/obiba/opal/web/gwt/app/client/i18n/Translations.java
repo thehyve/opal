@@ -2336,4 +2336,9 @@ public interface Translations extends Constants {
   @Description("Launch garbage collector title")
   @DefaultStringValue("Launch garbage collector")
   String launchGarbageCollectorTitle();
+
+    @Description("Validate label")
+    @DefaultStringValue("Validate")
+    String validate();
+
 }

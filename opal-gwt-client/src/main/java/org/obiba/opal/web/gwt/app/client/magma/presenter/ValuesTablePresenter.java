@@ -148,8 +148,6 @@ public class ValuesTablePresenter extends PresenterWidget<ValuesTablePresenter.D
 
   /**
    * When showing values from the VariablePresenter, we don't have to set/reset the filter
-   *
-   * @param select
    */
   public void updateValuesDisplay() {
     updateValuesDisplay("");
