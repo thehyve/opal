@@ -7,37 +7,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.obiba.opal.web.magma.provider;
+
+package org.obiba.opal.web.system.taxonomy;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 
-import org.obiba.magma.MagmaRuntimeException;
+import org.obiba.opal.core.cfg.NoSuchTermException;
 import org.obiba.opal.web.magma.ClientErrorDtos;
 import org.obiba.opal.web.provider.ErrorDtoExceptionMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.google.protobuf.GeneratedMessage;
 
-import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 
 @Component
 @Provider
-public class MagmaRuntimeExceptionMapper extends ErrorDtoExceptionMapper<MagmaRuntimeException> {
-
-  private static final Logger log = LoggerFactory.getLogger(MagmaRuntimeExceptionMapper.class);
+public class NoSuchTermExceptionMapper extends ErrorDtoExceptionMapper<NoSuchTermException> {
 
   @Override
   protected Response.Status getStatus() {
-    return BAD_REQUEST;
+    return NOT_FOUND;
   }
 
   @Override
-  protected GeneratedMessage.ExtendableMessage<?> getErrorDto(MagmaRuntimeException exception) {
-    log.warn("Magma exception", exception);
-    return ClientErrorDtos.getErrorMessage(getStatus(), "MagmaRuntimeException", exception.getMessage()).build();
+  protected GeneratedMessage.ExtendableMessage<?> getErrorDto(NoSuchTermException exception) {
+    return ClientErrorDtos.getErrorMessage(getStatus(), "NoSuchTerm").addArguments(exception.getVocabularyName())
+        .addArguments(exception.getTermName()).build();
   }
 
 }

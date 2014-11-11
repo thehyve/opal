@@ -6,7 +6,7 @@
   <groupId>org.obiba.opal.sesi</groupId>
   <artifactId>opal</artifactId>
   <packaging>pom</packaging>
-  <version>2.5-SNAPSHOT</version>
+  <version>2.5.1-SNAPSHOT</version>
 
   <name>opal</name>
   <description>Opal Application</description>
@@ -201,91 +201,91 @@
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-api</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-js</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-security</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-xstream</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-fs</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-limesurvey</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-excel</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-spss</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-csv</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-jdbc</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-mongodb</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-null</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-datasource-hibernate</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-crypt</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.obiba.magma</groupId>
         <artifactId>magma-math</artifactId>
-        <version>${magma.version}</version>
+        <version>1.11.2-sesi-SNAPSHOT</version>
       </dependency>
 
       <dependency>
