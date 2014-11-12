@@ -90,6 +90,8 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
 
   private static final int PERMISSIONS_TAB_INDEX = 3;
 
+  private static final int VALIDATION_TAB_INDEX = 4;
+
   @UiField
   Label name;
 
@@ -157,6 +159,9 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
   Panel valuesPanel;
 
   @UiField
+  Panel validationPanel;
+
+    @UiField
   OpalSimplePager pager;
 
   @UiField
@@ -268,6 +273,8 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
       panel = permissionsPanel;
     } else if(slot == Slots.ContingencyTable) {
       panel = crossResultsPanel;
+    } else if (slot == Slots.Validation) {
+      panel = validationPanel;
     }
 
     if(panel != null) {
@@ -492,6 +499,11 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
     getUiHandlers().onShowValues();
   }
 
+  @UiHandler("validationTab")
+  void onValidationTabSelect(ClickEvent event) {
+        getUiHandlers().onShowValidation();
+    }
+
   @UiHandler("downloadDictionary")
   void onDownloadDictionary(ClickEvent event) {
     getUiHandlers().onDownloadDictionary();
@@ -637,6 +649,11 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
   }
 
   @Override
+  public HasAuthorization getValidationAuthorizer() {
+        return new TabPanelAuthorizer(tabPanel, VALIDATION_TAB_INDEX);
+    }
+
+  @Override
   public HasAuthorization getTableIndexStatusAuthorizer() {
     return new UIObjectAuthorizer(indexStatus);
   }
@@ -670,7 +687,12 @@ public class TableView extends ViewWithUiHandlers<TableUiHandlers> implements Ta
     return tabPanel.getSelectedTab() == VALUES_TAB_INDEX;
   }
 
-  @Override
+    @Override
+    public boolean isValidationTabSelected() {
+        return tabPanel.getSelectedTab() == VALIDATION_TAB_INDEX;
+    }
+
+    @Override
   public void setIndexStatusVisible(boolean b) {
     indexStatus.setVisible(b);
   }
