@@ -25,10 +25,11 @@ DESCRIPTION_LOG = """Data integration Web application for biobanks by OBiBa. Opa
     assessment centres. Its ultimate purpose is to achieve seamless
     data-sharing among biobanks.
 """
+MODULES = ['opal_tools_lib']
 PACKAGES = ['opal', 'opal.protobuf', 'opal.security']
-PACKAGES_DIR = {'opal': 'bin/opal'}
-SCRIPTS = ['bin/scripts/opal']
-INSTALL_REQUIRES = ['protobuf >= 2.4', 'pycurl']
+PACKAGES_DIR = {'': 'bin', 'opal': 'bin/opal'}
+SCRIPTS = ['bin/scripts/opal', 'bin/scripts/opal_upload', 'bin/scripts/opal_permission_revoke']
+INSTALL_REQUIRES = ['protobuf >= 2.4', 'pycurl', 'cached-property']
 
 setup(
     name=PACKAGE_NAME,
@@ -42,6 +43,7 @@ setup(
     description=DESCRIPTION,
     long_description=DESCRIPTION_LOG,
     platforms=PLATFORMS,
+    py_modules=MODULES,
     packages=PACKAGES,
     package_dir=PACKAGES_DIR,
     scripts=SCRIPTS,

@@ -1,0 +1,19 @@
+# SAMPLE permissionrevoke.conf
+
+[main]
+#url to the opal server
+url = http://localhost:8080
+
+#username
+user = administrator
+#password
+password = password
+
+#projects to automate permission revoke (comma separated values)
+projects = project1,project2
+
+#name of the table that in each project contains the permission revoke records
+revoke_table = permission_revoke
+
+#full path to the log file
+logfile = ~/permissionrevoke.log

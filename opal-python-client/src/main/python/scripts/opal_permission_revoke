@@ -1,0 +1,147 @@
+#!/usr/bin/python
+
+from __future__ import print_function, division
+
+import json
+import time
+from opal_tools_lib import *
+
+verbose = '-v' in sys.argv
+quiet = '-q' in sys.argv
+
+CONFIGFILE = '~/.opal/permissionrevoke.conf'
+
+def setup():
+    global url, projects, revoke_table, revoke_table_name, logfile, auth_params
+
+    with setup_loader(CONFIGFILE) as config:
+        projects = [p.strip() for p in config.get('main', 'projects').split(',')]
+        revoke_table_name = config.get('main', 'revoke_table')
+        logfile = expanduser(config.get('main', 'logfile'))
+
+
+#we don' want to mess up with administrator permissions, we exclude it when needed
+administrator_subject = ('administrator', 'USER')
+
+
+def revoke(subject, project, table):
+    "Revoke access for subject to project.table. Subject is a tuple (name, type)."
+    principal, type = subject
+    logging.info("Revoking permissions for {0} '{1}' on '{2}.{3}'".format(
+        type.lower(), principal, project, table))
+
+    url = '/project/{0}/permissions/table/{1}?type={2}&principal={3}'.format(
+        u(project), u(table), u(type), u(principal))
+
+    run_rest_command(url, 'DELETE')
+
+
+def revoke_rows_query(project):
+    "Returns the REST url for getting the revoke rows expired before today"
+    query = '[* TO {0}]'.format(time.strftime('%Y-%m-%d'))
+    queryparam = '{0}-{1}-expiration_date:{2}'.format(project, revoke_table_name, query)
+    return '/datasource/{0}/table/{1}/valueSets/_search?query={2}'.format(
+        u(project), u(revoke_table_name), u(queryparam))
+
+
+def get_revoke_users(project, retrycount=0):
+    "Returns a list of user tuples to process, without any specific order"
+    try:
+        res = json.loads(run_rest_command(revoke_rows_query(project)))
+    except subprocess.CalledProcessError as e:
+        if '404 Not Found' in e.output:
+            raise KnownError('Permission revocation table {0} does not exist in project {1}!'.format(
+                revoke_table_name, project))
+        elif 'The requested URL returned error: 503 Service Unavailable' in e.output:
+            if retrycount > 0:
+                raise
+            create_index(project, revoke_table_name)
+            return get_revoke_users(project, retrycount+1)
+
+    vsets = res['valueSets']
+    revoke_users = []
+    for vs in vsets.get('valueSets', ()):
+        values_dict = dict(zip(vsets['variables'],
+                               (v['value'] for v in vs['values'])
+        ))
+        revoke_users.append((values_dict['principal'], values_dict['type']))
+    return revoke_users
+
+
+def create_index(project, table):
+    logging.info("Creating index for {0}.{1}".format(project, table))
+    run_rest_command('/datasource/{0}/table/{1}/index'.format(u(project), u(table)), method='PUT')
+    time.sleep(1)
+    status = json.loads(run_rest_command('/datasource/{0}/table/{1}/index'.format(u(project), u(table))))['status']
+    while status == 'IN_PROGRESS':
+        time.sleep(2)
+        status = json.loads(run_rest_command('/datasource/{0}/table/{1}/index'.format(u(project), u(table))))['status']
+    if status == 'OUTDATED':
+        logging.error('Creating index for {0}.{1} failed'.format(project, table))
+    else:
+        logging.info('Creating index for {0}.{1} finished, status: {2}'.format(project, table, status))
+
+
+def get_project_tables(project):
+    "Returns a list with all relevant project tables"
+
+    tables = json.loads(run_rest_command('/datasource/{0}'.format(u(project))))['table']
+    #we dont want to mess with revoke table perms, so we remove it
+    if revoke_table_name in tables: tables.remove(revoke_table_name)
+    return tables
+
+
+def get_table_subjects(project, table):
+    "Returns a list of subject keys for the given table, except the administrator subject"
+    res = json.loads(run_rest_command('/project/{0}/permissions/table/{1}'.format(
+        u(project), u(table))))
+
+    return [(e['subject']['principal'], e['subject']['type']) for e in res if e != administrator_subject]
+
+def get_tables_subjects_map(project):
+    "Returns a dictionary of table to list of existing subjects"
+    tables = json.loads(run_rest_command('/datasource/{0}'.format(u(project))))['table']
+    #we dont want to mess with revoke table perms, so we remove it
+    if revoke_table_name in tables: tables.remove(revoke_table_name)
+
+    return {t: get_table_subjects(project, t) for t in tables}
+
+
+def process_project(project):
+    revoke_count = 0
+    revoke_users = get_revoke_users(project)
+    table_subjects = get_tables_subjects_map(project)
+
+    for table, subjects in table_subjects.iteritems():
+        for r in revoke_users:
+            if r in subjects:
+                revoke(r, project, table)
+                revoke_count += 1
+    return revoke_count
+
+
+def main():
+    retcode = 0
+    count = 0
+    try:
+        #for every project
+        for project in projects:
+            try:
+                count += process_project(project)
+            except KnownError as e:
+                handle_exception(e)
+                retcode |= 1
+
+        if count == 0:
+            logging.info("No permissions to remove")
+
+    except Exception as e:
+        handle_exception(e)
+        retcode |= 2
+        
+    sys.exit(retcode)
+    
+
+if __name__ == '__main__':
+    setup()
+    main()
