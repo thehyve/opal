@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- This examples assumes your main Groovy is in src/main/groovy and your test Groovy is in src/test/groovy. -->
+  <!-- The version of Groovy used in the example requires Java 6 or higher. -->
+  <!-- This example won't work for Groovy that depends on Java or circular dependencies between Java and Groovy. -->
+
+  <groupId>org.obiba.opal.sesi</groupId>
+  <artifactId>opal-test</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <name>opal-test</name>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <maven.compiler.target>1.7</maven.compiler.target>
+    <groovyVersion>2.3.2</groovyVersion>
+    <opalVersion>2.5.1-SNAPSHOT</opalVersion>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
+      <version>${groovyVersion}</version>
+      <!-- Uncomment line below to use invokedynamic version of Groovy (requires Java 7 or higher). -->
+      <!--<classifier>indy</classifier>-->
+    </dependency>
+    <dependency>
+      <groupId>org.obiba.opal.sesi</groupId>
+      <artifactId>opal-rest-client</artifactId>
+      <version>${opalVersion}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <id>compile</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc">
+                  <classpath refid="maven.compile.classpath" />
+                </taskdef>
+                <mkdir dir="${project.build.outputDirectory}" />
+                <groovyc srcdir="${basedir}/src/main/groovy" destdir="${project.build.outputDirectory}" encoding="${project.build.sourceEncoding}">
+                  <classpath refid="maven.compile.classpath" />
+                </groovyc>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+<!--
+          <execution>
+            <id>test-compile</id>
+            <phase>generate-test-sources</phase>
+            <configuration>
+              <target>
+                <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc">
+                  <classpath refid="maven.test.classpath" />
+                </taskdef>
+                <mkdir dir="${project.build.testOutputDirectory}" />
+                <groovyc srcdir="${basedir}/src/test/groovy" destdir="${project.build.testOutputDirectory}" encoding="${project.build.sourceEncoding}">
+                  <classpath refid="maven.test.classpath" />
+                </groovyc>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+-->
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+
