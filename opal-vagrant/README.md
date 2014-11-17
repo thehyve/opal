@@ -16,7 +16,7 @@ If you need to customize something, create a 'config.yaml' copying from 'config.
 Please kept all your customization in this config.yaml filee, and don't modify the Vagrantfile directly.<br>
 This way we can update/enhance later on the Vagrantfile making sure your settings are kept.<br>
 Please refer to section 'Guest VM customization' for concrete examples<br>
-4. In the same folder of Vagrantfile, run
+4. In the same folder of Vagrantfile (src/main/vagrant), run
 
     vagrant up
 
