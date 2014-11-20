@@ -11,18 +11,19 @@ from urllib import quote_plus
 from StringIO import StringIO
 from os.path import expanduser, isfile
 import contextlib
+import opal.core
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
 
-
 auth_params = []
+login_info = opal.core.OpalClient.LoginInfo()
 
 @contextlib.contextmanager
 def setup_loader(configfile):
     """This context manager opens the config file, reads shared options and does error handling. Tool specific options
     can be specified in the code block."""
-    global url, auth_params, logfile
+    global url, auth_params, logfile, login_info
 
     config = ConfigParser()
     configfile = expanduser(configfile)
@@ -30,16 +31,13 @@ def setup_loader(configfile):
     try:
         with open(configfile) as conf:
             config.readfp(conf)
-
             logfile = expanduser(config.get('main', 'logfile'))
-            url = config.get('main', 'url')
-            if not url.startswith('https'):
-                raise KnownError("Opal url must be a secure (https) url. Found '{}'".format(url))
-            if config.has_option('main', 'use_certificate') and \
-                    config.getboolean('main', 'use_certificate'):
-                auth_params += ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
+            login_info.data = parse_login_info(config, 'main').data
+
+            if login_info.isSsl():
+                auth_params += ['-o', login_info.data['server'] , '-sc', login_info.data['cert'], '-sk', login_info.data['key']]
             else:
-                auth_params += ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+                auth_params += ['-o', login_info.data['server'] , '-u', login_info.data['user'], '-p', login_info.data['password']]
 
             configure_logging()
 
@@ -57,6 +55,27 @@ def setup_loader(configfile):
         handle_exception(e)
         sys.exit(1)
 
+def parse_login_info(config, section):
+    data = dict()
+    url = config.get(section, 'url')
+    if not url.startswith('https'):
+        raise KnownError("Opal url must be a secure (https) url. Found '{}'".format(url))
+    data['server'] = url
+
+    if config.has_option(section, 'use_certificate') and \
+            config.getboolean(section, 'use_certificate'):
+        data['cert'] = config.get(section, 'ssl_cert')
+        data['key'] = config.get(section, 'ssl_key')
+    else:
+        data['user'] = config.get(section, 'user')
+        data['password'] = config.get(section, 'password')
+
+    result = opal.core.OpalClient.LoginInfo()
+    result.data = data
+    return result
+
+def get_login_info():
+    return login_info
 
 ## Configure logging ##
 
@@ -94,7 +113,7 @@ class KnownError (Exception):
     pass
 
 
-def run_rest_command_params(url, params, method, progresscallback=lambda: None):
+def run_rest_command_params(url, params, method, progresscallback=lambda: None, auth=auth_params):
     """
     Call a rest url with the list of parameters. If there are too many parameters to fit in a single request,
     split them up into multiple requests.
@@ -111,7 +130,7 @@ def run_rest_command_params(url, params, method, progresscallback=lambda: None):
         # if no parameters, return
         if urlwriter.len == len(url): return
         # strip off last '&'
-        run_rest_command(urlwriter.getvalue()[:-1], method=method)
+        run_rest_command(urlwriter.getvalue()[:-1], method=method, auth=auth)
         urlwriter.seek(len(url)); urlwriter.truncate()
         progresscallback()
 
@@ -122,11 +141,12 @@ def run_rest_command_params(url, params, method, progresscallback=lambda: None):
     send()
 
 
-def run_rest_command(url, method=None):
+def run_rest_command(url, method=None, auth=auth_params):
     m = []
     if method != None:
         m = ['-m', method]
-    return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
+    #return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
+    return run_command(['opal', 'rest'] + auth + ['-v', url] + m)
 
 def run_command(cmd):
     logging.log(LOGINFO, 'executing ' + ' '.join(hide_password(cmd)))
@@ -180,3 +200,35 @@ def handle_exception(e):
     if not verbose:
         print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
     logging.debug(e, exc_info=True)
+
+def rest_call(resource, login=login_info, verbose=verbose, method='GET',
+              content=None, content_type='application/x-protobuf'):
+
+    request = opal.core.OpalClient.build(login).new_request()
+    request.fail_on_error()
+
+    request.accept_json()
+
+    if content != None:
+        request.content(content)
+        request.content_type(content_type)
+
+    if verbose:
+        request.verbose()
+
+    # send request
+    request.method(method).resource(resource)
+    response = request.send()
+
+    return response.content
+
+def rest_post(resource, content, login=login_info):
+    return rest_call(resource, login=login, verbose=verbose, content=content, method='POST')
+
+def error_code(error):
+    string = str(error)
+    if '404 Not Found' in string:
+        return 404
+    else:
+        return -1
+
