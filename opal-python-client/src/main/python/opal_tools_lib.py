@@ -6,6 +6,8 @@ from __future__ import print_function, division
 import sys
 import logging
 import subprocess
+import json
+
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 from urllib import quote_plus
 from StringIO import StringIO
@@ -203,7 +205,15 @@ def handle_exception(e):
 
 def rest_call(resource, login=login_info, verbose=verbose, method='GET',
               content=None, content_type='application/x-protobuf'):
-
+    """
+:param resource: REST resource
+:param login: LoginInfo to use for connection
+:param verbose:
+:param method: http method to use
+:param content: content to pass
+:param content_type: type of content
+:return: response
+"""
     request = opal.core.OpalClient.build(login).new_request()
     request.fail_on_error()
 
@@ -218,17 +228,30 @@ def rest_call(resource, login=login_info, verbose=verbose, method='GET',
 
     # send request
     request.method(method).resource(resource)
-    response = request.send()
-
-    return response.content
+    return request.send()
 
 def rest_post(resource, content, login=login_info):
+    """Shortcut for rest_call, assuming POST and mandatory content"""
     return rest_call(resource, login=login, verbose=verbose, content=content, method='POST')
+
+def json_loads(response):
+    """Parses the expected json content with json.loads and returns it"""
+    return json.loads(response.content)
+
+def parse_job_id(response):
+    """Parses and returns the newly created job id"""
+    if response.code == 201 and response.headers.has_key('Location'):
+        location = response.headers['Location']
+        idx = location.rfind('/')
+        return location[idx + 1:]
+    raise KnownError("Job not created")
 
 def error_code(error):
     string = str(error)
     if '404 Not Found' in string:
         return 404
+    elif '401 Unauthorized' in string:
+        return 401
     else:
         return -1
 
