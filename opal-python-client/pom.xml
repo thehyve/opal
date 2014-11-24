@@ -237,6 +237,21 @@
                               </mapping>
 
                               <mapping>
+                                  <directory>/usr/share/pyshared</directory>
+                                  <filemode>755</filemode>
+                                  <username>root</username>
+                                  <groupname>root</groupname>
+                                  <sources>
+                                      <source>
+                                          <location>${basedir}/target/opal-python/bin</location>
+                                          <includes>
+                                              <include>opal_tools_lib.py</include>
+                                          </includes>
+                                      </source>
+                                  </sources>
+                              </mapping>
+
+                              <mapping>
                                   <directory>/usr/share/doc/opal-python-client</directory>
                                   <filemode>744</filemode>
                                   <username>root</username>
