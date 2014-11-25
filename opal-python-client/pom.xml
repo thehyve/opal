@@ -216,6 +216,7 @@
                                               <include>opal</include>
                                               <include>opal_upload</include>
                                               <include>opal_permission_revoke</include>
+                                              <include>opal_sync</include>
                                           </includes>
                                       </source>
                                   </sources>

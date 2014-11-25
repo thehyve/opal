@@ -1,5 +1,5 @@
-# This file contains code that is shared between opal_upload and opal_permission_revoke. There is no real reason for
-# it being here except to prevent code duplication.
+# This file contains code that is shared between opal_upload, opal_permission_revoke and opal_sync
+# There is no real reason for it being here except to prevent code duplication.
 
 from __future__ import print_function, division
 

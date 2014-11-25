@@ -28,7 +28,8 @@ DESCRIPTION_LOG = """Data integration Web application for biobanks by OBiBa. Opa
 MODULES = ['opal_tools_lib']
 PACKAGES = ['opal', 'opal.protobuf', 'opal.security']
 PACKAGES_DIR = {'': 'bin', 'opal': 'bin/opal'}
-SCRIPTS = ['bin/scripts/opal', 'bin/scripts/opal_upload', 'bin/scripts/opal_permission_revoke']
+SCRIPTS = ['bin/scripts/opal', 'bin/scripts/opal_upload',
+           'bin/scripts/opal_permission_revoke', 'bin/scripts/opal_sync']
 INSTALL_REQUIRES = ['protobuf >= 2.4', 'pycurl', 'cached-property']
 
 setup(
