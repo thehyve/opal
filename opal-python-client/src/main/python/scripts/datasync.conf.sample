@@ -1,0 +1,34 @@
+#SAMPLE datasync.conf
+
+[main]
+#url to our opal server
+url = https://localhost:8443
+
+#username
+user = administrator
+#password
+password = password
+
+#where fileupload script will look for files
+fileupload_src_folder = ~/data/input
+
+#comma separated values with names of tables we don't want to copy
+skipped_tables = permission_revoke, sometable
+
+#full path to the log file
+logfile = ~/datasync.log
+
+#####
+#for every opal/project we want to synchronize with, we need an extra section for it, with a unique name
+[remoteproject1]
+#url of the remote opal
+url = https://remove_opal:8443
+#username
+user = user
+#password
+password = password
+#project on the remote opal
+remote_project = some_project
+#project on the local opal
+local_project = remote1
+

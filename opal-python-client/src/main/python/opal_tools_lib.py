@@ -1,28 +1,35 @@
-# This file contains code that is shared between opal_upload and opal_permission_revoke. There is no real reason for
-# it being here except to prevent code duplication.
+# This file contains code that is shared between opal_upload, opal_permission_revoke and opal_sync
+# There is no real reason for it being here except to prevent code duplication.
 
 from __future__ import print_function, division
 
 import sys
 import logging
 import subprocess
+import json
+
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 from urllib import quote_plus
 from StringIO import StringIO
 from os.path import expanduser, isfile
 import contextlib
+import opal.core
 
 verbose = '-v' in sys.argv
 quiet = '-q' in sys.argv
 
-
 auth_params = []
+login_info = opal.core.OpalClient.LoginInfo()
+
+error_code_mapping = dict()
+error_code_mapping['404 Not Found'] = 404
+error_code_mapping['401 Unauthorized'] = 401
 
 @contextlib.contextmanager
 def setup_loader(configfile):
     """This context manager opens the config file, reads shared options and does error handling. Tool specific options
     can be specified in the code block."""
-    global url, auth_params, logfile
+    global url, auth_params, logfile, login_info
 
     config = ConfigParser()
     configfile = expanduser(configfile)
@@ -30,16 +37,13 @@ def setup_loader(configfile):
     try:
         with open(configfile) as conf:
             config.readfp(conf)
-
             logfile = expanduser(config.get('main', 'logfile'))
-            url = config.get('main', 'url')
-            if not url.startswith('https'):
-                raise KnownError("Opal url must be a secure (https) url. Found '{}'".format(url))
-            if config.has_option('main', 'use_certificate') and \
-                    config.getboolean('main', 'use_certificate'):
-                auth_params += ['-o', url, '-sc', config.get('main', 'ssl_cert'), '-sk', config.get('main', 'ssl_key')]
+            login_info.data = parse_login_info(config, 'main').data
+
+            if login_info.isSsl():
+                auth_params += ['-o', login_info.data['server'] , '-sc', login_info.data['cert'], '-sk', login_info.data['key']]
             else:
-                auth_params += ['-o', url, '-u', config.get('main', 'user'), '-p', config.get('main', 'password')]
+                auth_params += ['-o', login_info.data['server'] , '-u', login_info.data['user'], '-p', login_info.data['password']]
 
             configure_logging()
 
@@ -57,6 +61,27 @@ def setup_loader(configfile):
         handle_exception(e)
         sys.exit(1)
 
+def parse_login_info(config, section):
+    data = dict()
+    url = config.get(section, 'url')
+    if not url.startswith('https'):
+        raise KnownError("Opal url must be a secure (https) url. Found '{}'".format(url))
+    data['server'] = url
+
+    if config.has_option(section, 'use_certificate') and \
+            config.getboolean(section, 'use_certificate'):
+        data['cert'] = config.get(section, 'ssl_cert')
+        data['key'] = config.get(section, 'ssl_key')
+    else:
+        data['user'] = config.get(section, 'user')
+        data['password'] = config.get(section, 'password')
+
+    result = opal.core.OpalClient.LoginInfo()
+    result.data = data
+    return result
+
+def get_login_info():
+    return login_info
 
 ## Configure logging ##
 
@@ -94,7 +119,7 @@ class KnownError (Exception):
     pass
 
 
-def run_rest_command_params(url, params, method, progresscallback=lambda: None):
+def run_rest_command_params(url, params, method, progresscallback=lambda: None, auth=auth_params):
     """
     Call a rest url with the list of parameters. If there are too many parameters to fit in a single request,
     split them up into multiple requests.
@@ -111,7 +136,7 @@ def run_rest_command_params(url, params, method, progresscallback=lambda: None):
         # if no parameters, return
         if urlwriter.len == len(url): return
         # strip off last '&'
-        run_rest_command(urlwriter.getvalue()[:-1], method=method)
+        run_rest_command(urlwriter.getvalue()[:-1], method=method, auth=auth)
         urlwriter.seek(len(url)); urlwriter.truncate()
         progresscallback()
 
@@ -121,12 +146,12 @@ def run_rest_command_params(url, params, method, progresscallback=lambda: None):
         urlwriter.write(param+'&')
     send()
 
-
-def run_rest_command(url, method=None):
+def run_rest_command(url, method=None, auth=auth_params):
     m = []
     if method != None:
         m = ['-m', method]
-    return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
+    #return run_command(['opal', 'rest'] + auth_params + ['-v', url] + m)
+    return run_command(['opal', 'rest'] + auth + ['-v', url] + m)
 
 def run_command(cmd):
     logging.log(LOGINFO, 'executing ' + ' '.join(hide_password(cmd)))
@@ -180,3 +205,80 @@ def handle_exception(e):
     if not verbose:
         print("Run '{0} -v' for more information".format(sys.argv[0]), file=sys.stderr)
     logging.debug(e, exc_info=True)
+
+def rest_call(resource, login=login_info, verbose=verbose, method='GET',
+              content=None, content_type='application/x-protobuf'):
+    """
+:param resource: REST resource
+:param login: LoginInfo to use for connection
+:param verbose:
+:param method: http method to use
+:param content: content to pass
+:param content_type: type of content
+:return: response
+"""
+    request = opal.core.OpalClient.build(login).new_request()
+    request.fail_on_error()
+
+    request.accept_json()
+
+    if content != None:
+        request.content(content)
+        request.content_type(content_type)
+
+    if verbose:
+        request.verbose()
+
+    # send request
+    request.method(method).resource(resource)
+    return request.send()
+
+def rest_call_with_params(url, params, method, login=login_info):
+    """
+    Call a rest url with the list of parameters. If there are too many parameters to fit in a single request,
+    split them up into multiple requests.
+
+    If the list of parameters is empty, no request will be made.
+    """
+    # Sending a request with too many parameters results in an error 413 FULL HEAD,
+
+    url += '?'
+    urlwriter = StringIO()
+    urlwriter.write(url)
+
+    def send():
+        # if no parameters, return
+        if urlwriter.len == len(url): return
+        # strip off last '&'
+        rest_call(urlwriter.getvalue()[:-1], method=method, login=login)
+        urlwriter.seek(len(url)); urlwriter.truncate()
+
+    for param in params:
+        if urlwriter.len + len(param) > MAX_URL_SIZE:
+            send()
+        urlwriter.write(param+'&')
+    send()
+
+def rest_post(resource, content, login=login_info):
+    """Shortcut for rest_call, assuming POST and mandatory content"""
+    return rest_call(resource, login=login, verbose=verbose, content=content, method='POST')
+
+def json_loads(response):
+    """Parses the expected json content with json.loads and returns it"""
+    return json.loads(response.content)
+
+def parse_job_id(response):
+    """Parses and returns the newly created job id"""
+    if response.code == 201 and response.headers.has_key('Location'):
+        location = response.headers['Location']
+        idx = location.rfind('/')
+        return location[idx + 1:]
+    raise KnownError("Job not created")
+
+def error_code(error):
+    string = str(error)
+    for k in error_code_mapping.keys():
+        if k in string:
+            return error_code_mapping[k]
+    return -1
+
