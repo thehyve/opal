@@ -200,6 +200,7 @@
                               <require>python-pycurl</require>
                               <require>python-protobuf</require>
                               <require>python-argparse</require>
+                              <require>cached-property</require>
                           </requires>
 
                           <mappings>
