@@ -21,6 +21,10 @@ quiet = '-q' in sys.argv
 auth_params = []
 login_info = opal.core.OpalClient.LoginInfo()
 
+error_code_mapping = dict()
+error_code_mapping['404 Not Found'] = 404
+error_code_mapping['401 Unauthorized'] = 401
+
 @contextlib.contextmanager
 def setup_loader(configfile):
     """This context manager opens the config file, reads shared options and does error handling. Tool specific options
@@ -142,7 +146,6 @@ def run_rest_command_params(url, params, method, progresscallback=lambda: None, 
         urlwriter.write(param+'&')
     send()
 
-
 def run_rest_command(url, method=None, auth=auth_params):
     m = []
     if method != None:
@@ -230,6 +233,32 @@ def rest_call(resource, login=login_info, verbose=verbose, method='GET',
     request.method(method).resource(resource)
     return request.send()
 
+def rest_call_with_params(url, params, method, login=login_info):
+    """
+    Call a rest url with the list of parameters. If there are too many parameters to fit in a single request,
+    split them up into multiple requests.
+
+    If the list of parameters is empty, no request will be made.
+    """
+    # Sending a request with too many parameters results in an error 413 FULL HEAD,
+
+    url += '?'
+    urlwriter = StringIO()
+    urlwriter.write(url)
+
+    def send():
+        # if no parameters, return
+        if urlwriter.len == len(url): return
+        # strip off last '&'
+        rest_call(urlwriter.getvalue()[:-1], method=method, login=login)
+        urlwriter.seek(len(url)); urlwriter.truncate()
+
+    for param in params:
+        if urlwriter.len + len(param) > MAX_URL_SIZE:
+            send()
+        urlwriter.write(param+'&')
+    send()
+
 def rest_post(resource, content, login=login_info):
     """Shortcut for rest_call, assuming POST and mandatory content"""
     return rest_call(resource, login=login, verbose=verbose, content=content, method='POST')
@@ -248,10 +277,8 @@ def parse_job_id(response):
 
 def error_code(error):
     string = str(error)
-    if '404 Not Found' in string:
-        return 404
-    elif '401 Unauthorized' in string:
-        return 401
-    else:
-        return -1
+    for k in error_code_mapping.keys():
+        if k in string:
+            return error_code_mapping[k]
+    return -1
 
