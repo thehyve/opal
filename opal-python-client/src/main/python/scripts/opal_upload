@@ -264,7 +264,7 @@ def cleanup_move(file):
     # Move local file to done folder
     logging.info('moving {0} to {1}'.format(src_path, done_folder))
     try:
-        shutil.move(file, done_folder)
+        shutil.move(src_path, done_folder)
     except OSError as e:
         raise KnownError("Cannot move file to done_folder: "+str(e))
 
