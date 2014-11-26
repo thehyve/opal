@@ -201,6 +201,7 @@
                               <require>python-protobuf</require>
                               <require>python-argparse</require>
                               <require>python-cached-property</require>
+                              <require>python-sortedcontainers</require>
                           </requires>
 
                           <mappings>
