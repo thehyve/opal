@@ -65,7 +65,7 @@ def parse_login_info(config, section):
     data = dict()
     url = config.get(section, 'url')
     if not url.startswith('https'):
-        raise KnownError("Opal url must be a secure (https) url. Found '{}'".format(url))
+        raise KnownError("Opal url must be a secure (https) url. Found '{0}'".format(url))
     data['server'] = url
 
     if config.has_option(section, 'use_certificate') and \
