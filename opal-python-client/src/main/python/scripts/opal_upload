@@ -98,9 +98,9 @@ class OpalFile:
 
     @cached_property
     def variables(self):
-        logging.log(LOGINFO, 'loading variables for table {}'.format(self.tableref))
+        logging.log(LOGINFO, 'loading variables for table {0}'.format(self.tableref))
         return json.loads(run_rest_command(
-            '/datasource/{}/table/{}/variables'.format(u(self.project), u(self.table))))
+            '/datasource/{0}/table/{1}/variables'.format(u(self.project), u(self.table))))
 
 
     # processes this file
@@ -163,7 +163,7 @@ class OpalFile:
             yield l[0]
 
     def do_truncate(self):
-        logging.info('Truncating table {}'.format(self.tableref))
+        logging.info('Truncating table {0}'.format(self.tableref))
         run_rest_command(
             '/datasource/{0}/table/{1}/valueSets'.format(u(self.project), u(self.table)),
             method='DELETE')
@@ -176,7 +176,7 @@ class OpalFile:
         upload_file(self.path, opal_folder)
 
     def do_upload_blobs(self, binary_vars):
-        logging.info("Uploading binary blobs for {}".format(self.name))
+        logging.info("Uploading binary blobs for {0}".format(self.name))
         with open(self.path) as csvfile:
             reader = csv.reader(csvfile)
             header = reader.next()
@@ -186,7 +186,7 @@ class OpalFile:
             max_bin = max(binary_columns)
             for line in reader:
                 if len(line) <= max_bin:
-                    raise KnownError("No value found for variable '{}' while trying to process {}".format(
+                    raise KnownError("No value found for variable '{0}' while trying to process {1}".format(
                         header[max_bin], self.name))
                 for idx in binary_columns:
                     blob = line[idx]
@@ -199,8 +199,8 @@ class OpalFile:
                         self.binary_files.add(blob)
                     except subprocess.CalledProcessError as e:
                         if e.returncode == 2 and r"couldn\'t open file" in e.output:
-                            raise KnownError("File not found: '{}', specified as binary value for variable '{}'"
-                                             " for id '{}' in {}".format(
+                            raise KnownError("File not found: '{0}', specified as binary value for variable '{1}'"
+                                             " for id '{2}' in {3}".format(
                                 src, header[idx], line[0], self.name))
                         raise
 
