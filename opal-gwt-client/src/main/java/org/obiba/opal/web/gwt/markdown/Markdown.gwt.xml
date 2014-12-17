@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2013 OBiBa. All rights reserved.
+  ~ Copyright (c) 2014 OBiBa. All rights reserved.
   ~
   ~ This program and the accompanying materials
   ~ are made available under the terms of the GNU Public License v3.0.
@@ -12,7 +12,6 @@
     'http://google-web-toolkit.googlecode.com/svn/tags/2.5.1/distro-source/core/src/gwt-module.dtd'>
 <module>
   <inherits name="com.google.gwt.core.Core"/>
-  <inherits name="org.moxieapps.gwt.highcharts.Highcharts"/>
   <inherits name="com.google.common.collect.Collect"/>
-  <entry-point class="org.obiba.opal.web.gwt.plot.client.PlotEntryPoint"/>
+  <entry-point class="org.obiba.opal.web.gwt.markdown.client.MarkdownEntryPoint"/>
 </module>
