@@ -2,10 +2,11 @@ package org.obiba.opal.core.service;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.obiba.magma.*;
+import org.obiba.magma.Value;
 import org.obiba.opal.core.service.validation.DataConstraint;
 import org.obiba.opal.core.service.validation.ValidatorFactory;
 import org.obiba.opal.core.support.MessageLogger;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.*;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
@@ -24,16 +25,17 @@ public class ValidationServiceImpl implements ValidationService {
     @Autowired
     ValidatorFactory validatorFactory;
 
+    @org.springframework.beans.factory.annotation.Value("${org.obiba.opal.validation.skip:false}")
+    private boolean skipValidation;
+
     @Override
     public boolean isValidationEnabled(ValueTable valueTable) {
-        return true;
-        /* @todo enable when ValueTable supports attributes
-        try {
-            return Boolean.valueOf(valueTable.getAttributeStringValue(VALIDATE_ATTRIBUTE));
-        } catch (NoSuchAttributeException ex) {
+        //@todo improve this when either project or table have attributes
+        if (skipValidation) {
             return false;
         }
-        */
+
+        return valueTable.isView(); //only views have validation enabled by default
     }
 
     private ValidationResult validateInTransaction(final ValueTable valueTable, final MessageLogger logger,
@@ -103,14 +105,25 @@ public class ValidationServiceImpl implements ValidationService {
                 String varName = entry.getKey();
                 Value value = valueTable.getValue(valueTable.getVariable(varName), vset);
 
-                List<DataConstraint> constraints = entry.getValue();
-                for (DataConstraint constraint : constraints) {
-                    if (!constraint.isValid(value)) {
-                        logger.warn(getMessage(vset.getVariableEntity().getIdentifier(),
-                                varName, value.toString(), constraint));
-                        collector.addFailure(varName, constraint.getType(), value);
+                if (value.isSequence()) {
+                    ValueSequence seq = value.asSequence();
+                    for (Value val: seq.getValue()) {
+                        validate(varName, entry.getValue(), logger, collector, val, vset.getVariableEntity().getIdentifier());
                     }
+                } else {
+                    validate(varName, entry.getValue(), logger, collector, value, vset.getVariableEntity().getIdentifier());
                 }
+            }
+        }
+    }
+
+    private void validate(String varName, List<DataConstraint> constraints, MessageLogger logger,
+                          ValidationResult collector, Value value, String id) {
+
+        for (DataConstraint constraint : constraints) {
+            if (!constraint.isValid(value)) {
+                logger.warn(getMessage(id, varName, value.toString(), constraint));
+                collector.addFailure(varName, constraint.getType(), value);
             }
         }
     }
