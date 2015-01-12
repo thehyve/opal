@@ -42,9 +42,12 @@ public class EsSearchQueryExecutor implements SearchQueryExecutor {
 
   private final ElasticSearchProvider esProvider;
 
-  public EsSearchQueryExecutor(@NotNull ElasticSearchProvider esProvider) {
+  private final int termsFacetSizeLimit;
+
+  public EsSearchQueryExecutor(@NotNull ElasticSearchProvider esProvider, int termsFacetSizeLimit) {
     Assert.notNull(esProvider, "Elastic Search provider is null!");
     this.esProvider = esProvider;
+    this.termsFacetSizeLimit = termsFacetSizeLimit;
   }
 
   /**
@@ -67,8 +70,9 @@ public class EsSearchQueryExecutor implements SearchQueryExecutor {
 
     String body = build(dtoQueries, indexManagerHelper);
 
-    esProvider.getRest().dispatchRequest(new EsRestRequest(indexManagerHelper.getValueTableIndex(), body, "_search"),
-        new RestChannel() {
+    EsRestRequest request = new EsRestRequest(indexManagerHelper.getValueTableIndex(), body, "_search");
+    esProvider.getRest().dispatchRequest(request,
+        new RestChannel(request) {
 
           @Override
           public void sendResponse(RestResponse response) {
@@ -107,7 +111,7 @@ public class EsSearchQueryExecutor implements SearchQueryExecutor {
    * Executes a single elastic search query.
    *
    * @param indexManagerHelper
-   * @param dtoQueries
+   * @param dtoQuery
    * @return
    * @throws JSONException
    */
@@ -127,16 +131,16 @@ public class EsSearchQueryExecutor implements SearchQueryExecutor {
   private Response convert(RestResponse response) throws IOException {
     byte[] entity;
     if(response.contentThreadSafe()) {
-      entity = response.content();
+      entity = response.content().toBytes();
     } else {
-      entity = new byte[response.contentLength()];
-      System.arraycopy(response.content(), 0, entity, 0, response.contentLength());
+      entity = new byte[response.content().length()];
+      System.arraycopy(response.content().toBytes(), 0, entity, 0, response.content().length());
     }
     return Response.status(response.status().getStatus()).entity(entity).type(response.contentType()).build();
   }
 
   private String build(Search.QueryTermsDto dtoQueries, IndexManagerHelper indexManagerHelper) throws JSONException {
-    QueryTermConverter converter = new QueryTermConverter(indexManagerHelper);
+    QueryTermConverter converter = new QueryTermConverter(indexManagerHelper, termsFacetSizeLimit);
     JSONObject queryJSON = converter.convert(dtoQueries);
 
     return queryJSON.toString();
