@@ -564,7 +564,7 @@ public interface Translations extends Constants {
       "NameHasInvalidCharacters",
       "Name contains invalid characters. Characters must be alphanumeric, space, hyphen or underscore.",
       "UnsupportedEncoding",
-      "An unsupported encoding other than Opal's current encoding '{0}' was detected. Please contact your administrator for further assistance.",
+      "An unsupported encoding other than Opal's current encoding '{0}' was detected. Please contact your administrator for further assistance.", //
       "SearchQueryIsInvalid", "Search query is invalid : {0}.",//
       "ClusterNameIsRequired", "Cluster name is required.",//
       "ShardsIsRequired", "Shards number is required.",//
@@ -575,7 +575,8 @@ public interface Translations extends Constants {
       "You cannot copy multiple tables within the same project. Copy each table individually or create a new project.",
 //
       "CannotCopyAllTablesWithinProject", "This action would be applied to all tables. You cannot copy multiple " +
-      "tables within the same project. Copy each table individually or create a new project."//
+      "tables within the same project. Copy each table individually or create a new project.",//
+      "IdentifierMappingFailed", "Identifiers mapping failed : {0}."
   })
   Map<String, String> userMessageMap();
 
@@ -2081,6 +2082,14 @@ public interface Translations extends Constants {
   @DefaultStringValue("No results found")
   String noResultsFound();
 
+  @Description("Min label")
+  @DefaultStringValue("Min")
+  String minLabel();
+
+  @Description("Max label")
+  @DefaultStringValue("Max")
+  String maxLabel();
+
   @Description("Mean label")
   @DefaultStringValue("Mean")
   String meanLabel();
@@ -2353,5 +2362,37 @@ public interface Translations extends Constants {
   })
   Map<String, String> authClientsTitleMap();
 
+
+    @Description("Validation overview title")
+    @DefaultStringValue("Overview")
+    String validationOverviewTitle();
+
+    @Description("Validation detail title")
+    @DefaultStringValue("Detail")
+    String validationDetailTitle();
+
+    @Description("Constraint label")
+    @DefaultStringValue("Constraint")
+    String constraintLabel();
+
+    @Description("Validation OK")
+    @DefaultStringValue("OK")
+    String validationOk();
+
+    @Description("Validation Fail")
+    @DefaultStringValue("Failure")
+    String validationFail();
+
+    @Description("Validation OK color")
+    @DefaultStringValue("green")
+    String validationOkColor();
+
+    @Description("Validation Fail color")
+    @DefaultStringValue("red")
+    String validationFailColor();
+
+    @Description("Validation in progres message")
+    @DefaultStringValue("In progress...")
+    String validationInProgress();
 
 }

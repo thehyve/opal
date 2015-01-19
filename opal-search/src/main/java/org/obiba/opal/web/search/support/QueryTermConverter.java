@@ -13,6 +13,7 @@ import java.util.List;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.obiba.opal.core.domain.VariableNature;
 import org.obiba.opal.web.model.Search;
 import org.springframework.util.Assert;
 
@@ -23,14 +24,17 @@ public class QueryTermConverter {
 
   private final IndexManagerHelper indexManagerHelper;
 
+  private final int termsFacetSize;
+
   /**
-   * @param fieldPrefix - the field prefix is in the form of 'datasource.table' and is needed to fully qualify a
-   * variable.
+   * @param indexManagerHelper - IndexManagerHelper provides certain variable information required for conversion
+   * @param termsFacetSize - used to limit the 'terms' facet results
    */
-  public QueryTermConverter(IndexManagerHelper indexManagerHelper) {
+  public QueryTermConverter(IndexManagerHelper indexManagerHelper, int termsFacetSize) {
     Assert.notNull(indexManagerHelper, "Index Manager Helper is null!");
 
     this.indexManagerHelper = indexManagerHelper;
+    this.termsFacetSize = termsFacetSize;
   }
 
   /**
@@ -44,37 +48,31 @@ public class QueryTermConverter {
     Assert.notNull(dtoQueries, "Query term DTO is null!");
 
     JSONObject jsonQuery = new JSONObject("{\"query\":{\"match_all\":{}}, \"size\":0}");
-    JSONObject jsonFacets = new JSONObject();
+    JSONObject jsonAggregations = new JSONObject();
 
     for(Search.QueryTermDto dtoQuery : dtoQueries.getQueriesList()) {
-      JSONObject jsonFacet = new JSONObject();
+      JSONObject jsonAggregation = new JSONObject();
 
       if(dtoQuery.hasExtension(Search.LogicalTermDto.filter)) {
-        convertLogicalFilter("filter", dtoQuery.getExtension(Search.LogicalTermDto.filter), jsonFacet);
-      } else {
-        if(dtoQuery.hasExtension(Search.VariableTermDto.field)) {
-          convertField(dtoQuery.getExtension(Search.VariableTermDto.field), jsonFacet);
-        }
-
-        if(dtoQuery.hasExtension(Search.LogicalTermDto.facetFilter)) {
-          convertLogicalFilter("facet_filter", dtoQuery.getExtension(Search.LogicalTermDto.facetFilter), jsonFacet);
-        }
+        convertLogicalFilter("filter", dtoQuery.getExtension(Search.LogicalTermDto.filter), jsonAggregation);
+      } else if(dtoQuery.hasExtension(Search.LogicalTermDto.facetFilter)) {
+        convertFilter(dtoQuery, jsonAggregation);
+      } else if(dtoQuery.hasExtension(Search.VariableTermDto.field)) {
+        convertField(dtoQuery.getExtension(Search.VariableTermDto.field), jsonAggregation);
+      } else if(dtoQuery.hasGlobal()) {
+        convertGlobal(dtoQuery, jsonAggregation);
       }
 
-      if(dtoQuery.hasGlobal()) {
-        jsonFacet.put("global", dtoQuery.getGlobal());
-      }
-
-      jsonFacets.put(dtoQuery.getFacet(), jsonFacet);
+      jsonAggregations.put(dtoQuery.getFacet(), jsonAggregation);
     }
 
-    jsonQuery.put("facets", jsonFacets);
+    jsonQuery.put("aggregations", jsonAggregations);
 
     return jsonQuery;
   }
 
-  private void convertLogicalFilter(String filterName, Search.LogicalTermDto dtoLogicalFilter, JSONObject jsonFacet)
-      throws JSONException {
+  private void convertLogicalFilter(String filterName, Search.LogicalTermDto dtoLogicalFilter,
+      JSONObject jsonAggregation) throws JSONException {
     Search.TermOperator operator = dtoLogicalFilter.getOperator();
     String operatorName = operator == Search.TermOperator.AND_OP ? "and" : "or";
     JSONObject jsonOperator = new JSONObject();
@@ -86,30 +84,118 @@ public class QueryTermConverter {
         jsonOperator.accumulate(operatorName, convertFilterType(filter));
       }
 
-      jsonFacet.put(filterName, jsonOperator);
+      jsonAggregation.put(filterName, jsonOperator);
     } else {
-      jsonFacet.put(filterName, convertFilterType(filters.get(0)));
+      jsonAggregation.put(filterName, convertFilterType(filters.get(0)));
     }
   }
 
-  private void convertField(Search.VariableTermDto dtoVariable, JSONObject jsonFacet)
+  private void convertFilter(Search.QueryTermDto dtoQuery, JSONObject jsonAggregation)
       throws JSONException, UnsupportedOperationException {
+    convertLogicalFilter("filter", dtoQuery.getExtension(Search.LogicalTermDto.facetFilter), jsonAggregation);
+    if(dtoQuery.hasExtension(Search.VariableTermDto.field)) {
+      convertNestedField(dtoQuery.getExtension(Search.VariableTermDto.field), jsonAggregation);
+    }
+  }
 
+  private void convertGlobal(Search.QueryTermDto dtoQuery, JSONObject jsonAggregation)
+      throws JSONException, UnsupportedOperationException {
+    jsonAggregation.put("global", new JSONObject());
+    if(dtoQuery.hasExtension(Search.VariableTermDto.field)) {
+      convertNestedField(dtoQuery.getExtension(Search.VariableTermDto.field), jsonAggregation);
+    }
+  }
+
+  private void convertNestedField(Search.VariableTermDto dtoVariable, JSONObject jsonAggregation)
+      throws JSONException, UnsupportedOperationException {
+    JSONObject jsonAgg = new JSONObject();
+    convertField(dtoVariable, jsonAgg);
+    JSONObject jsonAggregation2 = new JSONObject();
+    jsonAggregation2.put("0", jsonAgg);
+    jsonAggregation.put("aggregations", jsonAggregation2);
+  }
+
+  private void convertField(Search.VariableTermDto dtoVariable, JSONObject jsonAggregation)
+      throws JSONException, UnsupportedOperationException {
+    if(dtoVariable.hasType()) {
+      convertFieldByType(dtoVariable, jsonAggregation);
+    } else {
+      convertFieldByNature(dtoVariable, jsonAggregation);
+    }
+  }
+
+  /**
+   * Convert variable query to field aggregation of the specified type (if applicable).
+   *
+   * @param dtoVariable
+   * @param jsonAggregation
+   * @throws JSONException
+   * @throws UnsupportedOperationException
+   */
+  private void convertFieldByType(Search.VariableTermDto dtoVariable, JSONObject jsonAggregation)
+      throws JSONException, UnsupportedOperationException {
+    String variable = dtoVariable.getVariable();
+    JSONObject jsonField = new JSONObject();
+    jsonField.put("field", variableFieldName(variable));
+
+    switch(dtoVariable.getType()) {
+      case MISSING:
+        jsonAggregation.put("missing", jsonField);
+        break;
+      case CARDINALITY:
+        jsonAggregation.put("cardinality", jsonField);
+        break;
+      case TERMS:
+        jsonField.put("size", termsFacetSize);
+        jsonAggregation.put("terms", jsonField);
+        break;
+      case STATS:
+        if(indexManagerHelper.getVariableNature(variable) != VariableNature.CONTINUOUS)
+          throw new IllegalArgumentException(
+              "Statistics aggregation is only applicable to numeric continuous variables");
+        jsonAggregation.put("extended_stats", jsonField);
+        break;
+      case PERCENTILES:
+        if(indexManagerHelper.getVariableNature(variable) != VariableNature.CONTINUOUS)
+          throw new IllegalArgumentException(
+              "Percentiles aggregation is only applicable to numeric continuous variables");
+        jsonAggregation.put("percentiles", jsonField);
+        break;
+    }
+  }
+
+  /**
+   * Convert field query to default field aggregation according to variable nature.
+   *
+   * @param dtoVariable
+   * @param jsonAggregation
+   * @throws JSONException
+   * @throws UnsupportedOperationException
+   */
+  private void convertFieldByNature(Search.VariableTermDto dtoVariable, JSONObject jsonAggregation)
+      throws JSONException, UnsupportedOperationException {
     String variable = dtoVariable.getVariable();
     JSONObject jsonField = new JSONObject();
     jsonField.put("field", variableFieldName(variable));
 
     switch(indexManagerHelper.getVariableNature(variable)) {
-      case CATEGORICAL:
-        jsonFacet.put("terms", jsonField);
-        break;
 
       case CONTINUOUS:
-        jsonFacet.put("statistical", jsonField);
+        jsonAggregation.put("extended_stats", jsonField);
+        break;
+
+      case CATEGORICAL:
+        // we want all categories frequencies: as we do not know the variable description at this point,
+        // set a maximum size to term facets request (0 means maximum)
+        // http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html
+        jsonField.put("size", 0);
+        jsonAggregation.put("terms", jsonField);
         break;
 
       default:
-        throw new UnsupportedOperationException("Variable nature not supported");
+        jsonField.put("size", termsFacetSize);
+        jsonAggregation.put("terms", jsonField);
+        break;
     }
   }
 
@@ -126,7 +212,7 @@ public class QueryTermConverter {
       convertExistFilter(jsonFilter, variable);
     }
 
-    if(dtoFilter.hasNot()) {
+    if(dtoFilter.hasNot() && dtoFilter.getNot()) {
       jsonFilter = new JSONObject().put("not", jsonFilter);
     }
 
