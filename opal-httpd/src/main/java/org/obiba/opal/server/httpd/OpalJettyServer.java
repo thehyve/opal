@@ -29,7 +29,6 @@ import org.jboss.resteasy.plugins.spring.SpringContextLoaderSupport;
 import org.obiba.opal.core.runtime.OpalRuntime;
 import org.obiba.opal.pac4j.Pac4jClientFilter;
 import org.obiba.opal.pac4j.Pac4jConfigurer;
-import org.obiba.opal.pac4j.Pac4jMultiClientUserFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
@@ -110,10 +109,10 @@ public class OpalJettyServer {
     handlers.addHandler(createDistFileHandler("/webapp"));
     // Add webapp extensions
     handlers.addHandler(createExtensionFileHandler(OpalRuntime.WEBAPP_EXTENSION));
-    ServletContextHandler servletContextHandler = createServletHandler();
+    ServletContextHandler servletContextHandler = createServletHandler(properties);
 
     //check/configure pac4j extra auth clients related servlets/filters
-    configurePac4j(servletContextHandler, properties);
+    //configurePac4j(servletContextHandler, properties);
 
     handlers.addHandler(servletContextHandler);
     jettyServer.setHandler(handlers);
@@ -180,7 +179,7 @@ public class OpalJettyServer {
     jettyServer.addConnector(sslConnector);
   }
 
-  private ServletContextHandler createServletHandler() {
+  private ServletContextHandler createServletHandler(Properties properties) {
     servletContextHandler = new ServletContextHandler(ServletContextHandler.NO_SECURITY);
     servletContextHandler.setContextPath("/");
 
@@ -198,6 +197,9 @@ public class OpalJettyServer {
     servletContextHandler.setInitParameter("resteasy.servlet.mapping.prefix", "/ws");
     servletContextHandler.addServlet(HttpServletDispatcher.class, "/ws/*");
 
+    //check/configure pac4j extra auth clients related servlets/filters
+    configurePac4j(servletContextHandler, properties);
+
     return servletContextHandler;
   }
 
@@ -205,13 +207,6 @@ public class OpalJettyServer {
 
         if (Pac4jConfigurer.init(properties)) {
             String pac4jCallbackPath = Pac4jConfigurer.getCallbackPath();
-            String baseRedirectPath = properties.getProperty("org.obiba.opal.pac4j.clients.basePath",
-                    Pac4jMultiClientUserFilter.DEFAULT_BASE_PATH);
-            String baseRedirectPattern = baseRedirectPath + "/*";
-
-            handler.addServlet(HttpServletDispatcher.class, baseRedirectPattern);
-            handler.addFilter(Pac4jMultiClientUserFilter.Wrapper.class, baseRedirectPattern, EnumSet.of(REQUEST, FORWARD));
-
             handler.addServlet(HttpServletDispatcher.class, pac4jCallbackPath);
             handler.addFilter(Pac4jClientFilter.Wrapper.class, pac4jCallbackPath, EnumSet.of(REQUEST, FORWARD));
         }
