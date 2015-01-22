@@ -109,10 +109,10 @@ public class OpalJettyServer {
     handlers.addHandler(createDistFileHandler("/webapp"));
     // Add webapp extensions
     handlers.addHandler(createExtensionFileHandler(OpalRuntime.WEBAPP_EXTENSION));
-    ServletContextHandler servletContextHandler = createServletHandler(properties);
+    ServletContextHandler servletContextHandler = createServletHandler();
 
     //check/configure pac4j extra auth clients related servlets/filters
-    //configurePac4j(servletContextHandler, properties);
+    configurePac4j(servletContextHandler, properties);
 
     handlers.addHandler(servletContextHandler);
     jettyServer.setHandler(handlers);
@@ -179,7 +179,7 @@ public class OpalJettyServer {
     jettyServer.addConnector(sslConnector);
   }
 
-  private ServletContextHandler createServletHandler(Properties properties) {
+  private ServletContextHandler createServletHandler() {
     servletContextHandler = new ServletContextHandler(ServletContextHandler.NO_SECURITY);
     servletContextHandler.setContextPath("/");
 
@@ -196,9 +196,6 @@ public class OpalJettyServer {
     servletContextHandler.setInitParameter(CONFIG_LOCATION_PARAM, "classpath:/META-INF/spring/opal-server/context.xml");
     servletContextHandler.setInitParameter("resteasy.servlet.mapping.prefix", "/ws");
     servletContextHandler.addServlet(HttpServletDispatcher.class, "/ws/*");
-
-    //check/configure pac4j extra auth clients related servlets/filters
-    configurePac4j(servletContextHandler, properties);
 
     return servletContextHandler;
   }
