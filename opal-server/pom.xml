@@ -67,7 +67,6 @@
       <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-upgrade</artifactId>
     </dependency>
-
     <dependency>
       <groupId>cglib</groupId>
       <artifactId>cglib-nodep</artifactId>

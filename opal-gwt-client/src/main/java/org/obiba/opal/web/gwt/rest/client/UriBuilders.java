@@ -676,8 +676,14 @@ public enum UriBuilders {
     public UriBuilder create() {
         return UriBuilder.create().segment("validation", "result", "{}");
     }
-  }
+  },
 
+  AUTH_CLIENTS {
+    @Override
+    public UriBuilder create() {
+      return UriBuilder.create().segment("authclients");
+    }
+  },
 
   ;
 

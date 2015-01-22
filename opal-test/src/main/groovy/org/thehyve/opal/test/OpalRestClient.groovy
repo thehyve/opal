@@ -33,6 +33,12 @@ class OpalRestClient {
         client.getResources(Database.DatabaseDto, client.newUri().segment('service','system','databases','sql').build(), Database.DatabaseDto.newBuilder())
     }
 
+    List<Opal.AuthClientDto> getAuthClients() {
+        //client.getResources(Opal.TableIndexStatusDto, client.newUri().segment('service', 'search', 'indices').build(), Opal.TableIndexStatusDto.newBuilder())
+        client.getResources(Opal.AuthClientDto, client.newUri().segment('authclients').build(), Opal.AuthClientDto.newBuilder())
+
+    }
+
     def getDatasources() {
         client.getResource(Magma.TableDto, client.newUri().segment('tables').build(), Magma.TableDto.newBuilder())
 

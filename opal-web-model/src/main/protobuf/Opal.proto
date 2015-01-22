@@ -383,3 +383,7 @@ message ValidationResultDto {
     optional string errorMessage = 8; //string for any unexpected error (that aborts validation)
 }
 
+message AuthClientDto {
+    required string name = 1;
+    optional string redirectUrl = 2;
+}

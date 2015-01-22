@@ -1,6 +1,7 @@
 package org.thehyve.opal.test
 
 import org.obiba.opal.rest.client.magma.OpalJavaClient
+import org.obiba.opal.web.model.Opal
 import org.obiba.opal.web.model.Search
 
 /**
@@ -26,7 +27,15 @@ class Main {
         //testQuery('testrobert','newview', 'testrobert-newview-ICD10:("E00")') //15
         //testFacetQuery('testrobert','newview', 1415802930505L) //0
 
-        testFacetQueries()
+        //testFacetQueries()
+        testEidAuth()
+    }
+
+    static testEidAuth() {
+
+        for (Opal.AuthClientDto dto: client.getAuthClients()) {
+            println("${dto.getName()} ${dto.getRedirectUrl()}")
+        }
 
     }
 

@@ -2346,9 +2346,22 @@ public interface Translations extends Constants {
   @DefaultStringValue("Launch garbage collector")
   String launchGarbageCollectorTitle();
 
-    @Description("Validate label")
-    @DefaultStringValue("Validate")
-    String validate();
+  @Description("Validate label")
+  @DefaultStringValue("Validate")
+  String validate();
+
+  @Description("Authorization Clients title map")
+  @DefaultStringMapValue({ "UNKNOWN", "", //
+            "eidClient", "EId", //
+  })
+  Map<String, String> authClientsTitleMap();
+
+    @Description("Authorization Clients icon map")
+    @DefaultStringMapValue({ "UNKNOWN", "noimage", //
+            "eidClient", "image/eid_logo.png", //
+    })
+    Map<String, String> authClientsImageMap();
+
 
     @Description("Validation overview title")
     @DefaultStringValue("Overview")
