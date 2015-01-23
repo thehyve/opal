@@ -324,6 +324,9 @@
                               rm -f /var/lib/opal/conf
                               ln -s ${opal.dir} ${install.dir}/opal
                               ln -s /etc/opal /var/lib/opal/conf
+                              # restart opal if is running
+                              status opal | grep -q "^opal start" > /dev/null
+                              if [ $? ]; then restart opal; fi
                           </script>
                       </postinstallScriptlet>
                   </configuration>
