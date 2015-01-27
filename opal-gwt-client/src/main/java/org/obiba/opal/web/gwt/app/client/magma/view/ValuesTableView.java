@@ -85,7 +85,7 @@ import com.gwtplatform.mvp.client.ViewWithUiHandlers;
 @SuppressWarnings("OverlyCoupledClass")
 public class ValuesTableView extends ViewWithUiHandlers<ValuesTableUiHandlers> implements ValuesTablePresenter.Display {
 
-  private static final int DEFAULT_MAX_VISIBLE_COLUMNS = 99;
+  private static final int DEFAULT_MAX_VISIBLE_COLUMNS = 5;
 
   private static final int DEFAULT_PAGE_SIZE = 20;
 
