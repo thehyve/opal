@@ -21,7 +21,7 @@ quiet = '-q' in sys.argv
 CONFIGFILE = '~/.opal/fileupload.conf'
 
 def setup():
-    global file_type, done, src_folder, done_folder, opal_folder
+    global file_type, done, src_folder, done_folder, opal_folder, csv_separator
 
     with setup_loader(CONFIGFILE) as config:
 
@@ -30,6 +30,11 @@ def setup():
         src_folder = expanduser(config.get('main', 'src_folder'))
         done_folder = expanduser(config.get('main', 'done_folder')) if done == 'move' else None
         opal_folder = config.get('main', 'opal_folder')
+
+        if config.has_option('main', 'csv_separator'):
+            csv_separator = config.get('main', 'csv_separator')
+        else:
+            csv_separator = ','
 
         if file_type != 'csv':
             raise KnownError(
@@ -208,7 +213,7 @@ class OpalFile:
         # opal import-csv -o <opal_base_url> -u <username> -p <password> -d <project> -i
         #      -pa <opalfs_self_path> -ty <entity_type> -t <table>
         import_cmd = ['opal', 'import-csv'] + auth_params + ['-d', self.project, '-i', '-ncv',
-                      '-pa', opal_folder+'/'+self.name, '-ty', self.entity_type, '-t', self.table]
+                      '-pa', opal_folder+'/'+self.name, '-ty', self.entity_type, '-t', self.table, '-s', csv_separator]
         result = json.loads(run_command(import_cmd))
         job_id = result['id']
         status = result['status']
