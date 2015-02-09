@@ -10,6 +10,7 @@
 
 package org.obiba.opal.web.system.taxonomy;
 
+import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
 import org.obiba.opal.core.cfg.TaxonomyService;
@@ -61,7 +62,37 @@ public class VocabularyResourceImpl implements VocabularyResource {
 
   @Override
   public Response saveVocabulary(Opal.VocabularyDto dto) {
-    taxonomyService.saveVocabulary(taxonomyName, Dtos.fromDto(dto));
+    taxonomyService.saveVocabulary(taxonomyName, vocabularyName, Dtos.fromDto(dto));
+    return Response.ok().build();
+  }
+
+  @Override
+  public Response deleteVocabulary() {
+    taxonomyService.deleteVocabulary(taxonomyName, vocabularyName);
+    return Response.ok().build();
+  }
+
+  @Override
+  public Response createTerm(Opal.TermDto dto) {
+    Vocabulary vocabulary = taxonomyService.getVocabulary(taxonomyName, vocabularyName);
+    vocabulary.addTerm(Dtos.fromDto(dto));
+    taxonomyService.saveVocabulary(taxonomyName, vocabularyName, vocabulary);
+    return Response.ok().build();
+  }
+
+  @Override
+  public Response saveTerm(@PathParam("term") String term, Opal.TermDto dto) {
+    Vocabulary vocabulary = taxonomyService.getVocabulary(taxonomyName, vocabularyName);
+    vocabulary.updateTerm(term, Dtos.fromDto(dto));
+    taxonomyService.saveVocabulary(taxonomyName, vocabularyName, vocabulary);
+    return Response.ok().build();
+  }
+
+  @Override
+  public Response deleteTerm(@PathParam("term") String term) {
+    Vocabulary vocabulary = taxonomyService.getVocabulary(taxonomyName, vocabularyName);
+    vocabulary.removeTerm(term);
+    taxonomyService.saveVocabulary(taxonomyName, vocabularyName, vocabulary);
     return Response.ok().build();
   }
 }

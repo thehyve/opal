@@ -29,6 +29,7 @@ import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.CategoriesEdit
 import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.NamespacedAttributesTableUiHandlers;
 import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.VariableAttributeModalPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.VariablePropertiesModalPresenter;
+import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.VariableTaxonomyModalPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.variablestoview.presenter.VariablesToViewPresenter;
 import org.obiba.opal.web.gwt.app.client.permissions.presenter.ResourcePermissionsPresenter;
 import org.obiba.opal.web.gwt.app.client.permissions.support.ResourcePermissionRequestPaths;
@@ -54,6 +55,7 @@ import org.obiba.opal.web.model.client.magma.AttributeDto;
 import org.obiba.opal.web.model.client.magma.CategoryDto;
 import org.obiba.opal.web.model.client.magma.TableDto;
 import org.obiba.opal.web.model.client.magma.VariableDto;
+import org.obiba.opal.web.model.client.opal.TaxonomiesDto;
 import org.obiba.opal.web.model.client.ws.ClientErrorDto;
 
 import com.google.gwt.core.client.JsArray;
@@ -74,7 +76,7 @@ import static com.google.gwt.http.client.Response.SC_FORBIDDEN;
 import static com.google.gwt.http.client.Response.SC_INTERNAL_SERVER_ERROR;
 import static com.google.gwt.http.client.Response.SC_NOT_FOUND;
 import static com.google.gwt.http.client.Response.SC_OK;
-import static org.obiba.opal.web.gwt.app.client.magma.variable.presenter.VariableAttributeModalPresenter.Mode;
+import static org.obiba.opal.web.gwt.app.client.magma.variable.presenter.BaseVariableAttributeModalPresenter.Mode;
 
 @SuppressWarnings("OverlyCoupledClass")
 public class VariablePresenter extends PresenterWidget<VariablePresenter.Display>
@@ -102,6 +104,8 @@ public class VariablePresenter extends PresenterWidget<VariablePresenter.Display
 
   private final ModalProvider<VariableAttributeModalPresenter> attributeModalProvider;
 
+  private final ModalProvider<VariableTaxonomyModalPresenter> taxonomyModalProvider;
+
   private TableDto table;
 
   private VariableDto variable;
@@ -123,7 +127,9 @@ public class VariablePresenter extends PresenterWidget<VariablePresenter.Display
       ModalProvider<VariablesToViewPresenter> variablesToViewProvider,
       ModalProvider<CategoriesEditorModalPresenter> categoriesEditorModalProvider,
       ModalProvider<VariablePropertiesModalPresenter> propertiesEditorModalProvider,
-      ModalProvider<VariableAttributeModalPresenter> attributeModalProvider, TranslationMessages translationMessages) {
+      ModalProvider<VariableAttributeModalPresenter> attributeModalProvider,
+      ModalProvider<VariableTaxonomyModalPresenter> taxonomyModalProvider,
+      TranslationMessages translationMessages) {
     super(eventBus, display);
     this.placeManager = placeManager;
     this.valuesTablePresenter = valuesTablePresenter;
@@ -136,6 +142,7 @@ public class VariablePresenter extends PresenterWidget<VariablePresenter.Display
     this.categoriesEditorModalProvider = categoriesEditorModalProvider.setContainer(this);
     this.propertiesEditorModalProvider = propertiesEditorModalProvider.setContainer(this);
     this.attributeModalProvider = attributeModalProvider.setContainer(this);
+    this.taxonomyModalProvider = taxonomyModalProvider.setContainer(this);
     getView().setUiHandlers(this);
   }
 
@@ -412,9 +419,16 @@ public class VariablePresenter extends PresenterWidget<VariablePresenter.Display
 
   @Override
   public void onAddAttribute() {
-    VariableAttributeModalPresenter attributeEditorPresenter = attributeModalProvider.get();
-    attributeEditorPresenter.setDialogMode(Mode.CREATE);
-    attributeEditorPresenter.initialize(table, variable);
+    VariableAttributeModalPresenter presenter = attributeModalProvider.get();
+    presenter.setDialogMode(Mode.CREATE);
+    presenter.initialize(table, variable);
+  }
+
+  @Override
+  public void onAddTaxonomy() {
+    VariableTaxonomyModalPresenter presenter = taxonomyModalProvider.get();
+    presenter.setDialogMode(Mode.CREATE);
+    presenter.initialize(table, variable);
   }
 
   @Override
@@ -461,21 +475,61 @@ public class VariablePresenter extends PresenterWidget<VariablePresenter.Display
     ResourceRequestBuilderFactory.newBuilder() //
         .forResource(uriBuilder.build(table.getDatasourceName(), table.getName(), variable.getName())) //
         .withResourceBody(VariableDto.stringify(dto)) //
-        .withCallback(Response.SC_OK, new ResponseCodeCallback() {
+        .withCallback(SC_OK, new ResponseCodeCallback() {
           @Override
           public void onResponseCode(Request request, Response response) {
             fireEvent(new VariableRefreshEvent());
           }
         }) //
-        .withCallback(Response.SC_BAD_REQUEST, new ErrorResponseCallback(getView().asWidget())) //
+        .withCallback(SC_BAD_REQUEST, new ErrorResponseCallback(getView().asWidget())) //
         .put().send();
   }
 
   @Override
-  public void onEditAttributes(List<JsArray<AttributeDto>> selectedItems) {
-    VariableAttributeModalPresenter attributeEditorPresenter = attributeModalProvider.get();
-    attributeEditorPresenter.setDialogMode(selectedItems.size() == 1 ? Mode.UPDATE_SINGLE : Mode.UPDATE_MULTIPLE);
-    attributeEditorPresenter.initialize(table, variable, selectedItems);
+  public void onEditAttributes(final List<JsArray<AttributeDto>> selectedItems) {
+    if (selectedItems == null || selectedItems.isEmpty()) return;
+    boolean sameNamespace = true;
+    String namespace = null;
+    for (JsArray<AttributeDto> selectedArray : selectedItems) {
+      for (AttributeDto attr : JsArrays.toIterable(selectedArray)) {
+        if (namespace == null) {
+          namespace = attr.hasNamespace() ? attr.getNamespace() : null;
+        } else {
+          sameNamespace = attr.hasNamespace() ? attr.getNamespace().equals(namespace) : true;
+        }
+      }
+    }
+    if (!sameNamespace || namespace == null) {
+      showEditCustomAttributes(selectedItems);
+    } else {
+      final String ns = namespace;
+      ResourceRequestBuilderFactory.<TaxonomiesDto>newBuilder()
+          .forResource(UriBuilders.SYSTEM_CONF_TAXONOMIES_SUMMARIES.create().build()).get()
+          .withCallback(new ResourceCallback<TaxonomiesDto>() {
+            @Override
+            public void onResource(Response response, TaxonomiesDto resource) {
+              for(TaxonomiesDto.TaxonomySummaryDto summary : JsArrays.toIterable(resource.getSummariesArray())) {
+                if(summary.getName().equals(ns)) {
+                  showEditTaxonomyAttributes(selectedItems);
+                  return;
+                }
+              }
+              showEditCustomAttributes(selectedItems);
+            }
+          }).send();
+    }
+  }
+
+  private void showEditCustomAttributes(List<JsArray<AttributeDto>> selectedItems) {
+    VariableAttributeModalPresenter presenter = attributeModalProvider.get();
+    presenter.setDialogMode(selectedItems.size() == 1 ? Mode.UPDATE_SINGLE : Mode.UPDATE_MULTIPLE);
+    presenter.initialize(table, variable, selectedItems);
+  }
+
+  private void showEditTaxonomyAttributes(List<JsArray<AttributeDto>> selectedItems) {
+    VariableTaxonomyModalPresenter presenter = taxonomyModalProvider.get();
+    presenter.setDialogMode(selectedItems.size() == 1 ? Mode.UPDATE_SINGLE : Mode.UPDATE_MULTIPLE);
+    presenter.initialize(table, variable, selectedItems);
   }
 
   private VariableDto getVariableDto() {

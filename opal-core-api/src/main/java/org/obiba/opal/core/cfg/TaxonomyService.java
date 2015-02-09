@@ -79,6 +79,15 @@ public interface TaxonomyService extends SystemService {
   void saveTaxonomy(@NotNull Taxonomy taxonomy);
 
   /**
+   * Update an existing {@link org.obiba.opal.core.domain.taxonomy.Taxonomy} (can be renamed).
+   *
+   * @param taxonomy
+   * @param taxonomyObj
+   * @throws NoSuchTaxonomyException
+   */
+  void saveTaxonomy(@NotNull String taxonomy, @NotNull Taxonomy taxonomyObj) throws NoSuchTaxonomyException;
+
+  /**
    * Delete a {@link org.obiba.opal.core.domain.taxonomy.Taxonomy} from name.
    *
    * @param name
@@ -124,6 +133,18 @@ public interface TaxonomyService extends SystemService {
    * @throws NoSuchTaxonomyException
    */
   void saveVocabulary(@NotNull String taxonomy, @NotNull Vocabulary vocabulary) throws NoSuchTaxonomyException;
+
+  /**
+   * Update a {@link org.obiba.opal.core.domain.taxonomy.Vocabulary} in the {@link org.obiba.opal.core.domain.taxonomy.Taxonomy}.
+   *
+   * @param taxonomy
+   * @param vocabulary
+   * @param vocabularyObj
+   * @throws NoSuchTaxonomyException
+   * @throws NoSuchVocabularyException
+   */
+  void saveVocabulary(@NotNull String taxonomy, @NotNull String vocabulary, @NotNull Vocabulary vocabularyObj)
+      throws NoSuchTaxonomyException, NoSuchVocabularyException;
 
   /**
    * Delete a {@link org.obiba.opal.core.domain.taxonomy.Vocabulary} from the {@link org.obiba.opal.core.domain.taxonomy.Taxonomy}.

@@ -23,6 +23,7 @@ import javax.validation.constraints.NotNull;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.obiba.opal.core.cfg.NoSuchTaxonomyException;
+import org.obiba.opal.core.cfg.NoSuchVocabularyException;
 import org.obiba.opal.core.cfg.TaxonomyService;
 import org.obiba.opal.core.domain.taxonomy.Taxonomy;
 import org.obiba.opal.core.domain.taxonomy.Vocabulary;
@@ -31,6 +32,7 @@ import org.obiba.opal.core.support.yaml.TaxonomyYaml;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.google.common.base.Strings;
@@ -42,9 +44,14 @@ public class TaxonomyServiceImpl implements TaxonomyService {
   @Autowired
   private OpalRuntime opalRuntime;
 
-  private static final Logger log = LoggerFactory.getLogger(TaxonomyServiceImpl.class);
+  @NotNull
+  @Value("${org.obiba.opal.taxonomies}")
+  private String taxonomyReferences;
 
-  private static final String OBIBA_USER = "obiba";
+  @Autowired
+  private TaxonomyPersistenceStrategy taxonomyPersistence;
+
+  private static final Logger log = LoggerFactory.getLogger(TaxonomyServiceImpl.class);
 
   private static final String MLSTRM_USER = "maelstrom-research";
 
@@ -52,12 +59,14 @@ public class TaxonomyServiceImpl implements TaxonomyService {
 
   private static final String GITHUB_URL = "https://raw.githubusercontent.com";
 
-  private final List<Taxonomy> taxonomies = Lists.newArrayList();
+  private List<Taxonomy> taxonomies = Lists.newArrayList();
 
   @Override
   @PostConstruct
   public void start() {
+    taxonomies = Collections.synchronizedList(Lists.newArrayList(taxonomyPersistence.readTaxonomies()));
     importDefault(false);
+    sort();
   }
 
   @Override
@@ -115,29 +124,41 @@ public class TaxonomyServiceImpl implements TaxonomyService {
   }
 
   @Override
-  public synchronized void saveTaxonomy(@NotNull final Taxonomy taxonomy) {
-    Taxonomy stored = getTaxonomy(taxonomy.getName());
-    if(stored == null) {
-      taxonomies.add(taxonomy);
-      Collections.sort(taxonomies, new Comparator<Taxonomy>() {
-
-        @Override
-        public int compare(Taxonomy t1, Taxonomy t2) {
-          return t1.getName().compareTo(t2.getName());
-        }
-
-      });
+  public void saveTaxonomy(@NotNull Taxonomy taxonomy) {
+    synchronized(this) {
+      Taxonomy stored = getTaxonomy(taxonomy.getName());
+      if(stored == null) {
+        taxonomies.add(taxonomy);
+        sort();
+      } else {
+        int idx = taxonomies.indexOf(stored);
+        taxonomies.set(idx, taxonomy);
+      }
+      taxonomyPersistence.writeTaxonomy(taxonomy.getName(), taxonomy, null);
     }
-    else {
-      int idx = taxonomies.indexOf(stored);
-      taxonomies.set(idx, taxonomy);
+  }
+
+  @Override
+  public void saveTaxonomy(@NotNull String taxonomy, @NotNull Taxonomy taxonomyObj)
+      throws NoSuchTaxonomyException {
+    synchronized(this) {
+      if(!hasTaxonomy(taxonomy)) throw new NoSuchTaxonomyException(taxonomy);
+      taxonomies.remove(getTaxonomy(taxonomy));
+      taxonomies.add(taxonomyObj);
+      sort();
+      taxonomyPersistence.writeTaxonomy(taxonomy, taxonomyObj, null);
     }
   }
 
   @Override
   public void deleteTaxonomy(@NotNull String name) {
-    Taxonomy taxonomy = getTaxonomy(name);
-    if(taxonomy != null) taxonomies.remove(taxonomy);
+    synchronized(this) {
+      Taxonomy taxonomy = getTaxonomy(name);
+      if(taxonomy != null) {
+        taxonomyPersistence.removeTaxonomy(name, null);
+        taxonomies.remove(taxonomy);
+      }
+    }
   }
 
   @Override
@@ -167,6 +188,16 @@ public class TaxonomyServiceImpl implements TaxonomyService {
     Taxonomy taxonomy = getTaxonomy(taxonomyName);
     if(taxonomy == null) throw new NoSuchTaxonomyException(taxonomyName);
     taxonomy.addVocabulary(vocabulary);
+    saveTaxonomy(taxonomy);
+  }
+
+  @Override
+  public void saveVocabulary(@NotNull String taxonomyName, @NotNull String vocabularyName,
+      @NotNull Vocabulary vocabulary) throws NoSuchTaxonomyException, NoSuchVocabularyException {
+    Taxonomy taxonomy = getTaxonomy(taxonomyName);
+    if(taxonomy == null) throw new NoSuchTaxonomyException(taxonomyName);
+    taxonomy.updateVocabulary(vocabularyName, vocabulary);
+    saveTaxonomy(taxonomy);
   }
 
   @Override
@@ -174,16 +205,30 @@ public class TaxonomyServiceImpl implements TaxonomyService {
     Taxonomy taxonomy = getTaxonomy(taxonomyName);
     if(taxonomy == null) throw new NoSuchTaxonomyException(taxonomyName);
     taxonomy.removeVocabulary(vocabularyName);
+    saveTaxonomy(taxonomy);
   }
 
   //
   // Private methods
   //
 
+  private void sort() {
+    Collections.sort(taxonomies, new Comparator<Taxonomy>() {
+
+      @Override
+      public int compare(Taxonomy t1, Taxonomy t2) {
+        return t1.getName().compareTo(t2.getName());
+      }
+
+    });
+  }
+
   private void importDefault(boolean override) {
-    importGitHubTaxonomy(MLSTRM_USER, "maelstrom-taxonomies", null, "area-of-information", override);
-    importGitHubTaxonomy(MLSTRM_USER, "maelstrom-taxonomies", null, "harmonization", override);
-    importGitHubTaxonomy(OBIBA_USER, "obiba-taxonomies", null, "default", override);
+    if (taxonomyReferences == null || taxonomyReferences.trim().isEmpty()) return;
+
+    for(String uri : taxonomyReferences.split(",")) {
+      importUriTaxonomy(uri.trim(), override);
+    }
   }
 
   private Taxonomy importGitHubTaxonomy(@NotNull String username, @NotNull String repo, @Nullable String ref,
@@ -199,6 +244,10 @@ public class TaxonomyServiceImpl implements TaxonomyService {
 
     String uri = GITHUB_URL + "/" + user + "/" + repo + "/" + reference + "/" + fileName;
 
+    return importUriTaxonomy(uri, override);
+  }
+
+  private Taxonomy importUriTaxonomy(@NotNull String uri, boolean override) {
     try {
       InputStream input = new URL(uri).openStream();
       TaxonomyYaml yaml = new TaxonomyYaml();
