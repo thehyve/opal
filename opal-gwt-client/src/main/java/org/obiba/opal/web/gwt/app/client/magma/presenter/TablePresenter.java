@@ -10,7 +10,6 @@
 package org.obiba.opal.web.gwt.app.client.magma.presenter;
 
 import com.google.common.base.Strings;
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayString;
 import com.google.gwt.core.client.JsonUtils;
@@ -43,9 +42,11 @@ import org.obiba.opal.web.gwt.app.client.magma.exportdata.presenter.DataExportPr
 import org.obiba.opal.web.gwt.app.client.magma.table.presenter.TablePropertiesModalPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.table.presenter.ViewPropertiesModalPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.table.presenter.ViewWhereModalPresenter;
+import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.BaseVariableAttributeModalPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.ContingencyTablePresenter;
 import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.VariableAttributeModalPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.VariablePropertiesModalPresenter;
+import org.obiba.opal.web.gwt.app.client.magma.variable.presenter.VariableTaxonomyModalPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.variablestoview.presenter.VariablesToViewPresenter;
 import org.obiba.opal.web.gwt.app.client.permissions.presenter.ResourcePermissionsPresenter;
 import org.obiba.opal.web.gwt.app.client.permissions.support.ResourcePermissionRequestPaths;
@@ -54,7 +55,12 @@ import org.obiba.opal.web.gwt.app.client.presenter.ModalProvider;
 import org.obiba.opal.web.gwt.app.client.project.ProjectPlacesHelper;
 import org.obiba.opal.web.gwt.app.client.support.VariableDtos;
 import org.obiba.opal.web.gwt.app.client.support.VariablesFilter;
-import org.obiba.opal.web.gwt.rest.client.*;
+import org.obiba.opal.web.gwt.rest.client.ResourceAuthorizationRequestBuilderFactory;
+import org.obiba.opal.web.gwt.rest.client.ResourceCallback;
+import org.obiba.opal.web.gwt.rest.client.ResourceRequestBuilderFactory;
+import org.obiba.opal.web.gwt.rest.client.ResponseCodeCallback;
+import org.obiba.opal.web.gwt.rest.client.UriBuilder;
+import org.obiba.opal.web.gwt.rest.client.UriBuilders;
 import org.obiba.opal.web.gwt.rest.client.authorization.CompositeAuthorizer;
 import org.obiba.opal.web.gwt.rest.client.authorization.HasAuthorization;
 import org.obiba.opal.web.model.client.magma.TableDto;
@@ -114,6 +120,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
 
   private final ModalProvider<VariableAttributeModalPresenter> attributeModalProvider;
 
+  private final ModalProvider<VariableTaxonomyModalPresenter> taxonomyModalProvider;
+
   private final Translations translations;
 
   private final TranslationMessages translationMessages;
@@ -148,7 +156,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
       ModalProvider<DataExportPresenter> dataExportModalProvider,
       ModalProvider<DataCopyPresenter> dataCopyModalProvider,
       ModalProvider<VariableAttributeModalPresenter> attributeModalProvider,
-      Translations translations, TranslationMessages translationMessages) {
+      ModalProvider<VariableTaxonomyModalPresenter> taxonomyModalProvider, Translations translations,
+      TranslationMessages translationMessages) {
     super(eventBus, display);
     this.placeManager = placeManager;
     this.valuesTablePresenter = valuesTablePresenter;
@@ -167,6 +176,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     this.dataCopyModalProvider = dataCopyModalProvider.setContainer(this);
     this.crossVariableProvider = crossVariableProvider;
     this.attributeModalProvider = attributeModalProvider.setContainer(this);
+    this.taxonomyModalProvider = taxonomyModalProvider.setContainer(this);
     getView().setUiHandlers(this);
   }
 
@@ -670,17 +680,31 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
   }
 
   @Override
-  public void onApplyAttribute(List<VariableDto> selectedItems) {
-    VariableAttributeModalPresenter attributeEditorPresenter = attributeModalProvider.get();
-    attributeEditorPresenter.setDialogMode(VariableAttributeModalPresenter.Mode.APPLY);
-    attributeEditorPresenter.initialize(table, selectedItems);
+  public void onApplyCustomAttribute(List<VariableDto> selectedItems) {
+    VariableAttributeModalPresenter presenter = attributeModalProvider.get();
+    presenter.setDialogMode(BaseVariableAttributeModalPresenter.Mode.APPLY);
+    presenter.initialize(table, selectedItems);
   }
 
   @Override
-  public void onDeleteAttribute(List<VariableDto> selectedItems) {
-    VariableAttributeModalPresenter attributeEditorPresenter = attributeModalProvider.get();
-    attributeEditorPresenter.setDialogMode(VariableAttributeModalPresenter.Mode.DELETE);
-    attributeEditorPresenter.initialize(table, selectedItems);
+  public void onApplyTaxonomyAttribute(List<VariableDto> selectedItems) {
+    VariableTaxonomyModalPresenter presenter = taxonomyModalProvider.get();
+    presenter.setDialogMode(BaseVariableAttributeModalPresenter.Mode.APPLY);
+    presenter.initialize(table, selectedItems);
+  }
+
+  @Override
+  public void onDeleteCustomAttribute(List<VariableDto> selectedItems) {
+    VariableAttributeModalPresenter presenter = attributeModalProvider.get();
+    presenter.setDialogMode(BaseVariableAttributeModalPresenter.Mode.DELETE);
+    presenter.initialize(table, selectedItems);
+  }
+
+  @Override
+  public void onDeleteTaxonomyAttribute(List<VariableDto> selectedItems) {
+    VariableTaxonomyModalPresenter presenter = taxonomyModalProvider.get();
+    presenter.setDialogMode(BaseVariableAttributeModalPresenter.Mode.DELETE);
+    presenter.initialize(table, selectedItems);
   }
 
   @Override

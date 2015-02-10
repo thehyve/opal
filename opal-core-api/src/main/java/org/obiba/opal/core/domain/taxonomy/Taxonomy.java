@@ -37,6 +37,7 @@ public class Taxonomy extends TaxonomyEntity {
   }
 
   public List<Vocabulary> getVocabularies() {
+    if(vocabularies == null) vocabularies = Lists.newArrayList();
     return vocabularies;
   }
 
@@ -44,11 +45,31 @@ public class Taxonomy extends TaxonomyEntity {
     this.vocabularies = vocabularies;
   }
 
+  /**
+   * Add or update a vocabulary (in the latter case, cannot be renamed).
+   *
+   * @param vocabulary
+   * @return
+   */
   public Taxonomy addVocabulary(Vocabulary vocabulary) {
-    if(vocabularies == null) vocabularies = Lists.newArrayList();
-    int idx = vocabularies.indexOf(vocabulary);
+    int idx = getVocabularies().indexOf(vocabulary);
     if(idx < 0) vocabularies.add(vocabulary);
     else vocabularies.set(idx, vocabulary);
+    return this;
+  }
+
+  /**
+   * Update the vocabulary (can be renamed).
+   *
+   * @param name
+   * @param vocabulary
+   * @return
+   * @throws NoSuchVocabularyException
+   */
+  public Taxonomy updateVocabulary(String name, Vocabulary vocabulary) throws NoSuchVocabularyException {
+    Vocabulary original = getVocabulary(name);
+    int idx = vocabularies.indexOf(original);
+    vocabularies.set(idx, vocabulary);
     return this;
   }
 
@@ -61,7 +82,7 @@ public class Taxonomy extends TaxonomyEntity {
         break;
       }
     }
-    if (found != null) {
+    if(found != null) {
       vocabularies.remove(found);
     }
   }

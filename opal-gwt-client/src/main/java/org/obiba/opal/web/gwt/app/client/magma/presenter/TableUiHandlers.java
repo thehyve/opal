@@ -40,13 +40,17 @@ public interface TableUiHandlers extends UiHandlers {
 
   void onCrossVariables();
 
-  void onApplyAttribute(List<VariableDto> selectedItems);
+  void onApplyTaxonomyAttribute(List<VariableDto> selectedItems);
+
+  void onApplyCustomAttribute(List<VariableDto> selectedItems);
 
   void onShowDictionary();
 
   void onShowValues();
 
-  void onDeleteAttribute(List<VariableDto> selectedItems);
+  void onDeleteTaxonomyAttribute(List<VariableDto> selectedItems);
+
+  void onDeleteCustomAttribute(List<VariableDto> selectedItems);
 
   void onVariablesFilterUpdate(String filter);
 

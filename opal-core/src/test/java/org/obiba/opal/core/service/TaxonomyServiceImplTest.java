@@ -10,6 +10,7 @@
 
 package org.obiba.opal.core.service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests;
 
@@ -244,6 +246,7 @@ public class TaxonomyServiceImplTest extends AbstractJUnit4SpringContextTests {
   }
 
   @Configuration
+  @PropertySource("classpath:/META-INF/defaults.properties")
   public static class Config extends AbstractOrientDbTestConfig {
 
     @Bean
@@ -255,6 +258,18 @@ public class TaxonomyServiceImplTest extends AbstractJUnit4SpringContextTests {
     public OpalRuntime opalRuntime() {
       OpalRuntime mock = EasyMock.createMock(OpalRuntime.class);
       EasyMock.expect(mock.hasFileSystem()).andReturn(false).anyTimes();
+      EasyMock.replay(mock);
+      return mock;
+    }
+
+    @Bean
+    public TaxonomyPersistenceStrategy taxonomyPersistence() {
+      TaxonomyPersistenceStrategy mock = EasyMock.createMock(TaxonomyPersistenceStrategy.class);
+      mock.writeTaxonomy(EasyMock.anyString(), EasyMock.anyObject(Taxonomy.class), EasyMock.anyString());
+      EasyMock.expectLastCall().anyTimes();
+      mock.removeTaxonomy(EasyMock.anyString(), EasyMock.anyString());
+      EasyMock.expectLastCall().anyTimes();
+      EasyMock.expect(mock.readTaxonomies()).andReturn(new HashSet<Taxonomy>());
       EasyMock.replay(mock);
       return mock;
     }

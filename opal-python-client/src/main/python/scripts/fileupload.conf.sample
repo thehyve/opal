@@ -12,6 +12,9 @@ password = password
 #file type of files to import. For now only csv is supported
 file_type = csv
 
+#separator character used in CSV files. Default is , (comma)
+#csv_separator = ;
+
 #what to do with the file after successful processing, one of move, delete, none
 #move: moves the file to done_folder
 #delete: removes the file

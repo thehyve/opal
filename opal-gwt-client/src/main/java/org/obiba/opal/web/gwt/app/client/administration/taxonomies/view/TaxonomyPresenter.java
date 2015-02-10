@@ -11,15 +11,17 @@ package org.obiba.opal.web.gwt.app.client.administration.taxonomies.view;
 
 import javax.annotation.Nullable;
 
-import org.obiba.opal.web.gwt.app.client.administration.taxonomies.event.TaxonomyCreatedEvent;
+import org.obiba.opal.web.gwt.app.client.administration.taxonomies.edit.TaxonomyEditModalPresenter;
 import org.obiba.opal.web.gwt.app.client.administration.taxonomies.event.TaxonomyDeletedEvent;
 import org.obiba.opal.web.gwt.app.client.administration.taxonomies.event.VocabularySelectedEvent;
+import org.obiba.opal.web.gwt.app.client.administration.taxonomies.vocabulary.edit.VocabularyEditModalPresenter;
 import org.obiba.opal.web.gwt.app.client.event.ConfirmationEvent;
 import org.obiba.opal.web.gwt.app.client.event.ConfirmationRequiredEvent;
 import org.obiba.opal.web.gwt.app.client.event.NotificationEvent;
 import org.obiba.opal.web.gwt.app.client.fs.event.FileDownloadRequestEvent;
 import org.obiba.opal.web.gwt.app.client.i18n.TranslationMessages;
 import org.obiba.opal.web.gwt.app.client.js.JsArrays;
+import org.obiba.opal.web.gwt.app.client.presenter.ModalProvider;
 import org.obiba.opal.web.gwt.rest.client.ResourceCallback;
 import org.obiba.opal.web.gwt.rest.client.ResourceRequestBuilderFactory;
 import org.obiba.opal.web.gwt.rest.client.ResponseCodeCallback;
@@ -49,10 +51,18 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
 
   private final TranslationMessages translationMessages;
 
+  private final ModalProvider<TaxonomyEditModalPresenter> taxonomyEditModalProvider;
+
+  private final ModalProvider<VocabularyEditModalPresenter> vocabularyEditModalProvider;
+
   @Inject
-  public TaxonomyPresenter(Display display, EventBus eventBus, TranslationMessages translationMessages) {
+  public TaxonomyPresenter(Display display, EventBus eventBus, TranslationMessages translationMessages,
+      ModalProvider<TaxonomyEditModalPresenter> taxonomyEditModalProvider,
+      ModalProvider<VocabularyEditModalPresenter> vocabularyEditModalProvider) {
     super(eventBus, display);
     this.translationMessages = translationMessages;
+    this.taxonomyEditModalProvider = taxonomyEditModalProvider.setContainer(this);
+    this.vocabularyEditModalProvider = vocabularyEditModalProvider.setContainer(this);
     getView().setUiHandlers(this);
   }
 
@@ -70,7 +80,7 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
   }
 
   public void setTaxonomy(String name) {
-    if (Strings.isNullOrEmpty(name)) {
+    if(Strings.isNullOrEmpty(name)) {
       getView().setTaxonomy(null);
     } else {
       refreshTaxonomy(name);
@@ -79,6 +89,7 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
 
   @Override
   public void onEdit() {
+    taxonomyEditModalProvider.get().initView(taxonomy);
   }
 
   @Override
@@ -95,7 +106,12 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
         String name = taxonomy.getName();
         ResourceRequestBuilderFactory.newBuilder() //
             .forResource(UriBuilders.SYSTEM_CONF_TAXONOMY.create().build(name)) //
-            .withCallback(SC_OK, new RemoveTaxonomyResponseCallBack()) //
+            .withCallback(SC_OK, new ResponseCodeCallback() {
+              @Override
+              public void onResponseCode(Request request, Response response) {
+                fireEvent(new TaxonomyDeletedEvent(taxonomy));
+              }
+            }) //
             .withCallback(SC_NOT_FOUND, new TaxonomyNotFoundCallBack(name)) //
             .delete().send();
       }
@@ -112,7 +128,8 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
 
   @Override
   public void onAddVocabulary() {
-
+    vocabularyEditModalProvider.get()
+        .initView(taxonomy, VocabularyDto.create());
   }
 
   @Override
@@ -159,7 +176,6 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
 
   private void addHandlers() {
     addRegisteredHandler(ConfirmationEvent.getType(), new ConfirmationEventHandler());
-    addRegisteredHandler(TaxonomyCreatedEvent.getType(), new TaxonomyCreatedUpdatedHandler());
     addRegisteredHandler(TaxonomyDeletedEvent.getType(), new TaxonomyDeletedEvent.TaxonomyDeletedHandler() {
       @Override
       public void onTaxonomyDeleted(TaxonomyDeletedEvent event) {
@@ -180,12 +196,7 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
         .get().send();
   }
 
-  private class RemoveTaxonomyResponseCallBack implements ResponseCodeCallback {
-    @Override
-    public void onResponseCode(Request request, Response response) {
-      fireEvent(new TaxonomyDeletedEvent(taxonomy));
-    }
-  }
+
 
   private class TaxonomyNotFoundCallBack implements ResponseCodeCallback {
 
@@ -197,18 +208,11 @@ public class TaxonomyPresenter extends PresenterWidget<TaxonomyPresenter.Display
 
     @Override
     public void onResponseCode(Request request, Response response) {
-      fireEvent(NotificationEvent.newBuilder().error("TaxonomyCannotBeFound").args(taxonomyName).build());
+      fireEvent(NotificationEvent.newBuilder().error("TaxonomyNotFound").args(taxonomyName).build());
     }
   }
 
-  private class TaxonomyCreatedUpdatedHandler implements TaxonomyCreatedEvent.TaxonomyCreatedHandler {
-    @Override
-    public void onTaxonomyCreated(TaxonomyCreatedEvent event) {
-      //refreshTaxonomy(event.);
-    }
-  }
-
-  class ConfirmationEventHandler implements ConfirmationEvent.Handler {
+  private class ConfirmationEventHandler implements ConfirmationEvent.Handler {
 
     @Override
     public void onConfirmation(ConfirmationEvent event) {
