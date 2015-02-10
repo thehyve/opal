@@ -99,7 +99,7 @@ So we need at least the identifiers database and one data database.
 You can use MySQL, MongoDB, or a combination of both.
 These can point to a dedicated database server, or just use the local databases.
 
-PS: You should mark one of the 'Data Databases' as 'Project default storage'. Its not mandatory, but if you don't do it, you have to explicitly specify the database everytime you create a project, and you cannot create automatically the local project (if needed) when using Opal-Opal data sharing.
+PS: You should mark one of the 'Data Databases' as 'Project default storage'. Its not mandatory, but if you don't do it, you have to explicitly specify the database everytime you create a project, and you cannot automatically create the local project (if needed) when using Opal-Opal data sharing.
 
 ## Locally install MySQL and setting 2 databases for Opal (optional)
 
