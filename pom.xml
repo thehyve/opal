@@ -1715,7 +1715,7 @@
 
     <scm>
         <connection>scm:git:git://github.com/thehyve/opal.git</connection>
-        <developerConnection>scm:git:https://github.com/thehyve/opal.git</developerConnection>
+        <developerConnection>scm:git:git://github.com/thehyve/opal.git</developerConnection>
         <url>https://github.com/thehyve/opal</url>
         <tag>master</tag>
     </scm>
