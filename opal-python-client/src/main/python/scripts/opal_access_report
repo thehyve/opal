@@ -18,8 +18,6 @@ def get_matches(filepath, regex):
             m = prog.match(line)
             if m is not None:
                 element = m.groupdict()
-                #if 'datetime' in element:
-                #    element['datetime'] = parse_datetime(element['datetime'])
                 result.append(element)
     #@todo: do we need to close the file
     return result
@@ -102,14 +100,16 @@ def assemble_report_data(files, regex, filter, transformer, processor):
 
 def report(data, template_path, output_path):
 
-    for e in data['elements']:
-        print(e)
+    print('')
+    print("Start date: {0}".format(data['min_date']))
+    print("End date: {0}".format(data['max_date']))
+    print('')
 
-    print(data['min_date'])
-    print(data['max_date'])
+    for e in data['elements']:
+        print("{0}\t{1}.{2}\t{3}".format(e['username'], e['datasource'], e['table'], e['datetime']))
 
 if len(sys.argv) < 2:
-    raise StandardError("No file arguments")
+    raise StandardError("Usage: opal_access_report <rest_log_file>")
 
 # Regular expression to use (defines the regex groups to be returned)
 regex = valueset_accesses_regex()
