@@ -1,0 +1,95 @@
+#!/usr/bin/python
+
+from __future__ import print_function
+from opal_tools_lib import *
+
+## Parse config file ##
+CONFIGFILE = '~/.opal/fileupload.conf'
+
+TABLE_PERM_MAP = dict()
+TABLE_PERM_MAP['TABLE_VALUES'] = 'View dictionary and values'
+TABLE_PERM_MAP['TABLE_READ'] = 'View dictionary and summaries'
+TABLE_PERM_MAP['TABLE_EDIT'] = 'Edit dictionary and view summaries'
+TABLE_PERM_MAP['TABLE_VALUES_EDIT'] = 'Edit dictionary and view values'
+TABLE_PERM_MAP['TABLE_ALL'] = 'Administrate'
+
+def setup():
+    global login_info
+    with setup_loader(CONFIGFILE) as config:
+        login_info = get_login_info()
+
+def get_data():
+    tables = get_all_tables()
+    user_permissions = dict()
+    group_permissions = dict()
+
+    for tuple in tables:
+        user_permissions[tuple] = get_permissions(tuple[1], tuple[0], tuple[2], 'USER')
+        group_permissions[tuple] = get_permissions(tuple[1], tuple[0], tuple[2], 'GROUP')
+
+    return (user_permissions, group_permissions)
+
+def get_all_tables():
+    """
+    :return: list of tuples (type, datasource, name), where type is 'table' or 'view'
+    """
+
+    result = []
+    datasources = json_loads(rest_call("/datasources"))
+    for ds in datasources:
+        name = ds['name']
+        if 'table' in ds:
+            tables = ds['table']
+            for t in tables:
+                result.append(('table', name, t))
+        if 'view' in ds:
+            tables = ds['view']
+            for t in tables:
+                result.append(('view', name, t))
+
+    return result
+
+def get_permissions(datasource, object_name, object_type, type):
+    node = "/datasource/{0}/{1}/{2}".format(datasource, object_type, object_name)
+    params = ['domain=opal', 'type=' + type, 'node=' + u(node)]
+
+    perms = json_loads(rest_call_with_params_single('/authz/query', params, 'GET'))
+    result = []
+    for p in perms:
+        acl = p['acls'][0]
+        principal = p['subject']['principal']
+        if principal != 'administrator' or type != 'USER':
+            action = TABLE_PERM_MAP[acl['actions'][0]]
+            result.append((principal, action))
+
+    return result
+
+def print_data(title, data):
+    print('')
+    print(title)
+    for tuple in data.keys():
+        perms = data[tuple]
+        if len(perms) > 0:
+            print('')
+            print("  {0} {1}.{2}".format(tuple[0], tuple[1], tuple[2]))
+            for p in perms:
+                print("    {0}\t{1}".format(p[0], p[1]))
+
+def report(data, output_path):
+
+    print_data('User permissions:', data[0])
+    print_data('Group permissions:', data[1])
+
+
+
+setup()
+
+# Processor function: IN: dictionary containing 'user_permissions' and 'group_permissions' list, OUT: report output dictionary
+processor = None
+
+#report related
+output = None
+
+report_data = get_data()
+
+report(report_data, output)
