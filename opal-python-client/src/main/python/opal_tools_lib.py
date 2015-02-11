@@ -259,6 +259,16 @@ def rest_call_with_params(url, params, method, login=login_info):
         urlwriter.write(param+'&')
     send()
 
+def rest_call_with_params_single(url, params, method, login=login_info):
+    """
+    Call a rest url with the list of parameters.
+    If the list of parameters is empty, no request will be made.
+    """
+    # Sending a request with too many parameters results in an error 413 FULL HEAD,
+
+    url += '?' + '&'.join(params)
+    return rest_call(url, method=method, login=login)
+
 def rest_post(resource, content, login=login_info):
     """Shortcut for rest_call, assuming POST and mandatory content"""
     return rest_call(resource, login=login, verbose=verbose, content=content, method='POST')

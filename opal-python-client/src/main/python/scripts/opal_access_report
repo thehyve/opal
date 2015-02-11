@@ -1,0 +1,137 @@
+#!/usr/bin/python
+
+from __future__ import print_function
+import sys
+import re
+
+def get_matches(filepath, regex):
+    """
+    Gets a list of regex group dictionaries for the matching lines in the given file path.
+    The regular expression should define the named groups to extract
+    """
+
+    prog = re.compile(regex)
+
+    result = []
+    with open(filepath, "rb") as file:
+        for line in file:
+            m = prog.match(line)
+            if m is not None:
+                element = m.groupdict()
+                result.append(element)
+    #@todo: do we need to close the file
+    return result
+
+def rest_line_regex(message, status):
+    """
+    Creates the regular expression pattern to match entries with a given message.
+    If status is not None, then the http status code must also be matched
+    """
+
+    parts = []
+    parts.append('"@timestamp":"(?P<datetime>.*)"')
+    parts.append('"message":"' + message + '"')
+    parts.append('"username":"(?P<username>[\w\s_-]+)"')
+    if status is not None:
+        parts.append('"status":"' + status + '"')
+    result = '.*' + ',.*'.join(parts) + '.*'
+    return result
+
+def valueset_accesses_regex():
+    """
+    Creates the regular expression pattern to match valueset accesses with code http status 200
+    Groups to extract: datetime, username, datasource and table
+    """
+
+    return rest_line_regex('/datasource/(?P<datasource>.*)/table/(?P<table>.*)/valueSets/_search.*', '200')
+
+def accesses_processor(input):
+    """
+    Repor data processor for accesses, adding 'max_date' and 'min_date' based on 'datetime' values in elements
+    :param input: input report data, containing 'elements'
+    :return: result report data
+    """
+
+    elements = input['elements']
+    max_date = '0000'
+    min_date = '9999'
+    for e in elements:
+        dt = e['datetime']
+        if dt > max_date:
+            max_date = dt
+        if dt < min_date:
+            min_date = dt
+
+    input['max_date'] = max_date
+    input['min_date'] = min_date
+    return input
+
+def filter_entries(list, filter):
+    for el in list:
+        if filter(el): yield el
+
+def transform_entries(list, transformer):
+    for el in list: yield transformer(el)
+
+def assemble_report_data(files, regex, filter, transformer, processor):
+    result = dict()
+    elements = []
+    for file in files:
+        # 1 - obtain the matches
+        matches = get_matches(file, regex)
+
+        # 2 - filter
+        if filter is not None:
+            matches = filter_entries(matches, filter)
+
+        # 3 - map
+        if transformer is not None:
+            matches = transform_entries(matches, transformer)
+
+        elements.extend(matches)
+
+    result['elements'] = elements
+
+    # 4 - processor (aggregate, enrich, etc..)
+    if processor is not None:
+        result = processor(result)
+
+    return result
+
+def report(data, template_path, output_path):
+
+    print('')
+    print("Start date: {0}".format(data['min_date']))
+    print("End date: {0}".format(data['max_date']))
+    print('')
+
+    for e in data['elements']:
+        print("{0}\t{1}.{2}\t{3}".format(e['username'], e['datasource'], e['table'], e['datetime']))
+
+if len(sys.argv) < 2:
+    raise StandardError("Usage: opal_access_report <rest_log_file>")
+
+# Regular expression to use (defines the regex groups to be returned)
+regex = valueset_accesses_regex()
+
+# Filter function: IN: element dictionary, OUT: true to keep/accept the element, false otherwise
+filter = None
+#filter = lambda e: e['username'] != 'administrator'
+
+# Element Transform function: IN: element dictionary, OUT: transformed element dictionary
+transformer = None
+
+# Processor function: IN: dictionary containing 'elements' list, OUT: report output dictionary
+#processor = None
+processor = lambda d: accesses_processor(d)
+
+#PDF related
+template = None
+output = None
+
+files = []
+files.append(sys.argv[1])
+
+report_data = assemble_report_data(files, regex, filter, transformer, processor)
+
+report(report_data, template, output)
