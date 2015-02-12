@@ -285,6 +285,12 @@ def parse_job_id(response):
         return location[idx + 1:]
     raise KnownError("Job not created")
 
+def csv_header(reader, errname):
+    try:
+        return reader.next()
+    except StopIteration:
+        raise KnownError("No header found in {0}".format(errname))
+
 def error_code(error):
     string = str(error)
     for k in error_code_mapping.keys():

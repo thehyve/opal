@@ -163,12 +163,13 @@ class OpalFile:
     def delete_ids(self, idfile):
         reader = csv.reader(idfile)
         # skip header
-        reader.next()
+        csv_header(reader, errname=self.name)
         for l in reader:
             if not l:
                 continue
             elif len(l) == 1 and not l[0].strip():
-                raise KnownError("Line containing only whitespace found while processing {0}".format(self.name))
+                raise KnownError("Line containing only whitespace found while processing {0} line {1}".format(
+                    self.name, reader.line_num))
             yield l[0]
 
     def do_truncate(self):
@@ -188,7 +189,7 @@ class OpalFile:
         logging.info("Uploading binary blobs for {0}".format(self.name))
         with open(self.path) as csvfile:
             reader = csv.reader(csvfile)
-            header = reader.next()
+            header = csv_header(reader, errname=self.name)
             binary_columns = [header.index(var) for var in binary_vars if var in header]
             if not binary_columns:
                 return
@@ -198,10 +199,11 @@ class OpalFile:
                     continue
                 if len(line) <= max_bin:
                     if len(line) == 1 and not line[0].strip():
-                        raise KnownError("Line containing only whitespace found while processing {0}".format(self.name))
+                        raise KnownError("Line containing only whitespace found while processing {0} line {1}".format(
+                            self.name, reader.line_num))
                     else:
-                        raise KnownError("No value found for id '{0}' variable '{1}' while trying to process {2}".format(
-                            line[0], header[max_bin], self.name))
+                        raise KnownError("No value found for id '{0}' variable '{1}' while trying to process {2} line {3}"
+                                         .format(line[0], header[max_bin], self.name, reader.line_num))
                 for idx in binary_columns:
                     blob = line[idx]
                     # Don't re-upload a file if it was already uploaded
