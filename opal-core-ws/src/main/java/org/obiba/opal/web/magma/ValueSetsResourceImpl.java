@@ -71,7 +71,7 @@ public class ValueSetsResourceImpl extends AbstractValueTableResource implements
     if (identifiers == null || identifiers.isEmpty()) {
       table.dropValueSets();
     } else if (table.isView()) {
-      throw new IllegalArgumentException("Cannot remove a value set from a view");
+      return Response.status(Response.Status.METHOD_NOT_ALLOWED).entity("Cannot remove a value set from a view").build();
     } else {
       ValueTableWriter vtw = getDatasource().createWriter(table.getName(), table.getEntityType());
       for (String id : identifiers) {
