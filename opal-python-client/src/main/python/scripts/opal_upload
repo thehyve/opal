@@ -165,6 +165,10 @@ class OpalFile:
         # skip header
         reader.next()
         for l in reader:
+            if not l:
+                continue
+            elif len(l) == 1 and not l[0].strip():
+                raise KnownError("Line containing only whitespace found while processing {0}".format(self.name))
             yield l[0]
 
     def do_truncate(self):
@@ -190,9 +194,14 @@ class OpalFile:
                 return
             max_bin = max(binary_columns)
             for line in reader:
+                if not line:
+                    continue
                 if len(line) <= max_bin:
-                    raise KnownError("No value found for variable '{0}' while trying to process {1}".format(
-                        header[max_bin], self.name))
+                    if len(line) == 1 and not line[0].strip():
+                        raise KnownError("Line containing only whitespace found while processing {0}".format(self.name))
+                    else:
+                        raise KnownError("No value found for id '{0}' variable '{1}' while trying to process {2}".format(
+                            line[0], header[max_bin], self.name))
                 for idx in binary_columns:
                     blob = line[idx]
                     # Don't re-upload a file if it was already uploaded
