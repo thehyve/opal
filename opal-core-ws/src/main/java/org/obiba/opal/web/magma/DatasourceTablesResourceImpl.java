@@ -98,7 +98,7 @@ public class DatasourceTablesResourceImpl implements AbstractTablesResource, Dat
    */
   @Override
   public Response getTables(Request request, boolean counts, @Nullable String entityType) {
-    TimestampedResponses.evaluate(request, datasource);
+    //TimestampedResponses.evaluate(request, datasource);
 
     // The use of "GenericEntity" is required because otherwise JAX-RS can't determine the type using reflection.
     //noinspection EmptyClass
