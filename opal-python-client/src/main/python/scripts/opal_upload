@@ -4,7 +4,6 @@ from __future__ import print_function, division
 
 import sys, os, errno
 import re
-import json
 import time
 import csv
 import shutil
