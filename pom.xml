@@ -1801,7 +1801,7 @@
     <liquibase.version>1.9.4</liquibase.version>
     <logback.version>1.1.2</logback.version>
     <logstash-logback.version>4.0</logstash-logback.version>
-    <magma.version>1.11.3-sesi-SNAPSHOT</magma.version>
+    <magma.version>1.11.2-sesi</magma.version>
     <public-datasources.version>1.2.0</public-datasources.version>
     <mail.version>1.5.0-b01</mail.version>
     <mockftpserver.version>2.5</mockftpserver.version>
@@ -1822,7 +1822,7 @@
     <REngine.version>0.6-8.1</REngine.version>
     <resteasy.version>3.0.10.Final</resteasy.version>
     <rhino-js.version>1.7R5</rhino-js.version>
-    <shiro.version>1.2.3</shiro.version>
+    <shiro.version>1.2.3-java8</shiro.version>
     <shiro-extras.version>1.0.3-obiba</shiro-extras.version>
     <slf4j.version>1.7.10</slf4j.version>
     <snakeyaml.version>1.14</snakeyaml.version>

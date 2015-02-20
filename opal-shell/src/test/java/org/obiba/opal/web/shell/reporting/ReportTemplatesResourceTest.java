@@ -17,7 +17,6 @@ import java.util.Set;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.shiro.session.mgt.SimpleSession;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.ThreadContext;
 import org.junit.After;
@@ -147,7 +146,6 @@ public class ReportTemplatesResourceTest {
 
   private void configureMock(Subject subject) {
     when(subject.getPrincipal()).thenReturn(mock(Principal.class));
-    when(subject.getSession()).thenReturn(new SimpleSession());
     when(subject.isPermitted("rest:/project/project1/report-template/template1:GET")).thenReturn(true);
     when(subject.isPermitted("rest:/project/project1/report-template/template2:GET")).thenReturn(true);
     when(subject.isPermitted("rest:/project/project1/report-template/template3:GET")).thenReturn(true);
