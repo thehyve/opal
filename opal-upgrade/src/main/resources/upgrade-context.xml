@@ -130,6 +130,11 @@
           <property name="appliesTo" value="2.3.0"/>
         </bean>
 
+        <bean class="org.obiba.opal.core.upgrade.v2_5_x.database.UpdatedDatetimeMillisPrecisionFixStep">
+          <property name="description" value="Adds millissecond precision to all 'updated' columns"/>
+          <property name="appliesTo" value="2.5.8"/>
+        </bean>
+
       </list>
     </property>
 
