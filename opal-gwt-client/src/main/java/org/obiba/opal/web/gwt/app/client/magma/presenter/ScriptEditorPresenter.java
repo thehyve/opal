@@ -9,12 +9,14 @@
  ******************************************************************************/
 package org.obiba.opal.web.gwt.app.client.magma.presenter;
 
+import com.google.gwt.core.client.JsArray;
 import org.obiba.opal.web.gwt.app.client.presenter.ModalProvider;
 import org.obiba.opal.web.gwt.app.client.support.VariableDtos;
 import org.obiba.opal.web.gwt.app.client.support.VariableDtos.ValueType;
 import org.obiba.opal.web.gwt.rest.client.ResourceCallback;
 import org.obiba.opal.web.gwt.rest.client.ResourceRequestBuilderFactory;
 import org.obiba.opal.web.gwt.rest.client.UriBuilder;
+import org.obiba.opal.web.model.client.magma.CategoryDto;
 import org.obiba.opal.web.model.client.magma.TableDto;
 import org.obiba.opal.web.model.client.magma.VariableDto;
 import org.obiba.opal.web.model.client.magma.ViewDto;
@@ -37,6 +39,8 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
   private final ModalProvider<ScriptEvaluationPopupPresenter> scriptEvaluationPopupProvider;
 
   private VariableDtoFactory variableDtoFactory = new DefaultVariableDtoFactory();
+
+  private JsArray<CategoryDto> categories;
 
   @Inject
   public ScriptEditorPresenter(EventBus eventBus, Display view,
@@ -83,6 +87,10 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
     getView().setScript(script);
   }
 
+  public void setCategories(JsArray<CategoryDto> categories) {
+      this.categories = categories;
+  }
+
   public String getSelectedScript() {
     return getView().getSelectedScript();
   }
@@ -125,6 +133,10 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
     VariableDto create();
   }
 
+    private JsArray<CategoryDto> getCategories() {
+        return categories;
+    }
+
   public class DefaultVariableDtoFactory implements VariableDtoFactory {
 
     @Override
@@ -144,6 +156,7 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
       }
 
       VariableDtos.setScript(derived, script);
+      derived.setCategoriesArray(getCategories());
       return derived;
     }
   }
