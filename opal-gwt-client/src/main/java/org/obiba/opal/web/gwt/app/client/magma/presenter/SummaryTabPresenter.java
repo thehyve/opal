@@ -9,6 +9,16 @@
  */
 package org.obiba.opal.web.gwt.app.client.magma.presenter;
 
+import com.google.gwt.core.client.JsonUtils;
+import com.google.gwt.http.client.Request;
+import com.google.gwt.http.client.Response;
+import com.google.gwt.http.client.URL;
+import com.google.inject.Inject;
+import com.google.web.bindery.event.shared.EventBus;
+import com.google.web.bindery.event.shared.HandlerRegistration;
+import com.gwtplatform.mvp.client.HasUiHandlers;
+import com.gwtplatform.mvp.client.PresenterWidget;
+import com.gwtplatform.mvp.client.View;
 import org.obiba.opal.web.gwt.app.client.event.NotificationEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.SummaryReceivedEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.SummaryRequiredEvent;
@@ -21,17 +31,6 @@ import org.obiba.opal.web.gwt.rest.client.ResponseCodeCallback;
 import org.obiba.opal.web.gwt.rest.client.UriBuilder;
 import org.obiba.opal.web.model.client.math.SummaryStatisticsDto;
 import org.obiba.opal.web.model.client.ws.ClientErrorDto;
-
-import com.google.gwt.core.client.JsonUtils;
-import com.google.gwt.http.client.Request;
-import com.google.gwt.http.client.Response;
-import com.google.gwt.http.client.URL;
-import com.google.inject.Inject;
-import com.google.web.bindery.event.shared.EventBus;
-import com.google.web.bindery.event.shared.HandlerRegistration;
-import com.gwtplatform.mvp.client.HasUiHandlers;
-import com.gwtplatform.mvp.client.PresenterWidget;
-import com.gwtplatform.mvp.client.View;
 
 /**
  *
@@ -116,13 +115,11 @@ public class SummaryTabPresenter extends PresenterWidget<SummaryTabPresenter.Dis
   @Override
   public void onRefreshSummary() {
     cancelPendingSummaryRequest();
-
     String uri = resourceRequestBuilder.getResource();
     // Remove queries from the url
     if(uri.contains("?")) {
       uri = uri.substring(0, uri.indexOf("?"));
     }
-
     // We have to decode the uri only because we rebuild a uri through uribuilder to truncate query paramaters
     // and add new ones... Ideally, we would have access to the UriBuilder directly.
     UriBuilder uriBuilder = UriBuilder.create().fromPath(URL.decodeQueryString(uri));
@@ -132,7 +129,15 @@ public class SummaryTabPresenter extends PresenterWidget<SummaryTabPresenter.Dis
     if(limit < entitiesCount) {
       uriBuilder.query("limit", String.valueOf(limit));
     }
-    resourceRequestBuilder.forResource(uriBuilder.build()).get();
+
+    String target = uriBuilder.build();
+    resourceRequestBuilder.forResource(target);
+    if (target.contains("_transient")) {
+        //for script evaluation, we must use post so the script/categories are passed in the form, otherwise the summary is incorrect
+        resourceRequestBuilder.post();
+    } else {
+        resourceRequestBuilder.get();
+    }
 
     onReset();
   }
