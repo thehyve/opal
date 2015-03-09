@@ -129,22 +129,6 @@ execute
 
     sudo puppet apply /vagrant/manifests/mongo_redhat.pp
 
-## Import/generate SSL Certificate
-
-Opal creates automatically a self-signed certificate for SSL.
-For non-production systems this is quite acceptable and ready to use, but for production it is advised to use an officially signed certificate (from a trusted authority).
-
-This can be done by reaching menu 'Administration', then in section 'System', click on 'General Settings'.
-In this page, 'Set Key Pair' has 2 options:
-
-1 - Import key pair. 
-Here you are asked to paste the private and public key in PEM format. 
-This is the option relevant for production
-
-2 - Create key pair. 
-Here you are asked to fill in several fields that will be used to generate a new self-signed certificate. 
-This is the option mostly used for non-production systems
-
 
 ---
 
