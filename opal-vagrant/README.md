@@ -129,6 +129,7 @@ execute
 
     sudo puppet apply /vagrant/manifests/mongo_redhat.pp
 
+
 ---
 
 # Service control and updates
