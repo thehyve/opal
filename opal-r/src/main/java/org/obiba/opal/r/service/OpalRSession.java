@@ -10,6 +10,7 @@
 package org.obiba.opal.r.service;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +46,14 @@ public class OpalRSession implements RASyncOperationTemplate {
 
   private RSession rSession;
 
+  private final String user;
+
+  private final Date created;
+
+  private Date timestamp;
+
+  private boolean busy = false;
+
   /**
    * R commands to be processed.
    */
@@ -69,7 +78,7 @@ public class OpalRSession implements RASyncOperationTemplate {
    *
    * @param connection
    */
-  OpalRSession(RConnection connection, TransactionalThreadFactory transactionalThreadFactory) {
+  OpalRSession(RConnection connection, TransactionalThreadFactory transactionalThreadFactory, String user) {
     this.transactionalThreadFactory = transactionalThreadFactory;
     try {
       rSession = connection.detach();
@@ -78,6 +87,9 @@ public class OpalRSession implements RASyncOperationTemplate {
       throw new RRuntimeException(e);
     }
     id = UUID.randomUUID().toString();
+    this.user = user;
+    created = new Date();
+    timestamp = created;
   }
 
   /**
@@ -87,6 +99,37 @@ public class OpalRSession implements RASyncOperationTemplate {
    */
   public String getId() {
     return id;
+  }
+
+  public void touch() {
+    timestamp = new Date();
+  }
+
+  public String getUser() {
+    return user;
+  }
+
+  public Date getCreated() {
+    return created;
+  }
+
+  public Date getTimestamp() {
+    return timestamp;
+  }
+
+  public boolean isBusy() {
+    return busy;
+  }
+
+  /**
+   * Check if the R session is not busy and has expired.
+   *
+   * @param timeout in minutes
+   * @return
+   */
+  public boolean hasExpired(long timeout) {
+    Date now = new Date();
+    return !busy && now.getTime() - timestamp.getTime() > timeout * 60 * 1000;
   }
 
   //
@@ -103,10 +146,14 @@ public class OpalRSession implements RASyncOperationTemplate {
   public void execute(ROperation rop) {
     RConnection connection = null;
     lock.lock();
+    busy = true;
+    touch();
     try {
       connection = newConnection();
       rop.doWithConnection(connection);
     } finally {
+      busy = false;
+      touch();
       lock.unlock();
       if(connection != null) close(connection);
     }
@@ -114,6 +161,7 @@ public class OpalRSession implements RASyncOperationTemplate {
 
   @Override
   public synchronized String executeAsync(ROperation rop) {
+    touch();
     ensureRCommandsConsumer();
     String rCommandId = id + "-" + commandId++;
     RCommand cmd = new RCommand(rCommandId, rop);
@@ -124,11 +172,13 @@ public class OpalRSession implements RASyncOperationTemplate {
 
   @Override
   public Iterable<RCommand> getRCommands() {
+    touch();
     return rCommandList;
   }
 
   @Override
   public boolean hasRCommand(String cmdId) {
+    touch();
     for(RCommand rCommand : rCommandList) {
       if(rCommand.getId().equals(cmdId)) return true;
     }
@@ -137,6 +187,7 @@ public class OpalRSession implements RASyncOperationTemplate {
 
   @Override
   public RCommand getRCommand(String cmdId) {
+    touch();
     for(RCommand rCommand : rCommandList) {
       if(rCommand.getId().equals(cmdId)) return rCommand;
     }
@@ -145,6 +196,7 @@ public class OpalRSession implements RASyncOperationTemplate {
 
   @Override
   public RCommand removeRCommand(String cmdId) {
+    touch();
     RCommand rCommand = getRCommand(cmdId);
     synchronized(rCommand) {
       rCommand.notifyAll();
@@ -157,7 +209,7 @@ public class OpalRSession implements RASyncOperationTemplate {
    * Close the R session.
    */
   public void close() {
-    if(rSession == null) return;
+    if(isClosed()) return;
 
     try {
       newConnection().close();
@@ -177,6 +229,10 @@ public class OpalRSession implements RASyncOperationTemplate {
       rCommandList.clear();
       rCommandQueue.clear();
     }
+  }
+
+  public boolean isClosed() {
+    return rSession == null;
   }
 
   //
@@ -205,7 +261,7 @@ public class OpalRSession implements RASyncOperationTemplate {
    */
   private void close(RConnection connection) {
     if(connection == null) return;
-    if (!Strings.isNullOrEmpty(connection.getLastError()) && !connection.getLastError().toLowerCase().equals("ok")) {
+    if(!Strings.isNullOrEmpty(connection.getLastError()) && !connection.getLastError().toLowerCase().equals("ok")) {
       throw new RRuntimeException("Unexpected R server error: " + connection.getLastError());
     }
     try {

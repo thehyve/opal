@@ -22,6 +22,7 @@ import org.obiba.opal.web.model.client.magma.VariableDto;
 import org.obiba.opal.web.model.client.magma.ViewDto;
 
 import com.google.common.base.Strings;
+import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -88,7 +89,7 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
   }
 
   public void setCategories(JsArray<CategoryDto> categories) {
-      this.categories = categories;
+    this.categories = categories;
   }
 
   public String getSelectedScript() {
@@ -133,9 +134,9 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
     VariableDto create();
   }
 
-    private JsArray<CategoryDto> getCategories() {
-        return categories;
-    }
+  private JsArray<CategoryDto> getCategories() {
+    return categories;
+  }
 
   public class DefaultVariableDtoFactory implements VariableDtoFactory {
 

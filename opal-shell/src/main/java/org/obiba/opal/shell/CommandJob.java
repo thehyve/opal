@@ -99,9 +99,9 @@ public class CommandJob implements OpalShell, Runnable {
   @Override
   public void progress(String message, long current, long end, int percent) {
     Session session = SecurityUtils.getSubject().getSession(false);
-    if (session != null) {
-      session.touch();
-    }
+
+    if(session != null) session.touch();
+
     if (percent == 100) {
       messages.add(createMessage(String.format("%s %s completed.", message, name)));
     }

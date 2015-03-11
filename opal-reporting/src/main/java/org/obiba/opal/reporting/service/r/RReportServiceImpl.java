@@ -124,14 +124,14 @@ public class RReportServiceImpl implements ReportService {
     OpalRSession rSession = null;
     try {
       File reportDesignFile = new File(reportDesign);
-      rSession = opalRSessionManager.newSubjectCurrentRSession();
+      rSession = opalRSessionManager.newSubjectRSession();
       String originalWorkDir = getRWorkDir(rSession);
       prepareRSession(rSession, parameters, reportDesignFile);
       runReport(rSession, reportDesignFile.getName());
       report = readFileFromR(rSession, reportDesignFile.getName().replace(".Rmd", ".html"));
       cleanRWorkDir(rSession, originalWorkDir);
     } finally {
-      if(rSession != null) rSession.close();
+      if(rSession != null) opalRSessionManager.removeSubjectRSession(rSession.getId());
     }
     return report;
   }

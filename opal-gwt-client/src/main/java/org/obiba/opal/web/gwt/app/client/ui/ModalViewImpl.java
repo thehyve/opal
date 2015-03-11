@@ -25,6 +25,7 @@ import com.gwtplatform.mvp.client.PopupViewCloseHandler;
 import com.gwtplatform.mvp.client.ViewImpl;
 import com.gwtplatform.mvp.client.proxy.NavigationEvent;
 import com.gwtplatform.mvp.client.proxy.NavigationHandler;
+import com.gwtplatform.mvp.client.view.PopupPositioner;
 
 /**
  * A simple implementation of {@link com.gwtplatform.mvp.client.PopupView} that can be used when the widget
@@ -117,8 +118,25 @@ public abstract class ModalViewImpl extends ViewImpl implements PopupView {
   }
 
   @Override
-  public void show() {
+  public void setPopupPositioner(PopupPositioner popupPositioner) {
+
+  }
+
+  @Override
+  public final void show() {
+  }
+
+  @Override
+  public final void showAndReposition() {
+    onShow();
     asModal().show();
+  }
+
+  /**
+   * Called before the modal is shown.
+   */
+  public void onShow() {
+
   }
 
   /**

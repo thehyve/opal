@@ -24,6 +24,8 @@ public class Dtos {
   public static Opal.TaxonomyDto asDto(Taxonomy taxonomy) {
     Opal.TaxonomyDto.Builder builder = Opal.TaxonomyDto.newBuilder();
     builder.setName(taxonomy.getName());
+    if (taxonomy.hasAuthor()) builder.setAuthor(taxonomy.getAuthor());
+    if (taxonomy.hasLicense()) builder.setLicense(taxonomy.getLicense());
     builder.addAllTitle(toLocaleTextDtoList(taxonomy.getTitle()));
     builder.addAllDescription(toLocaleTextDtoList(taxonomy.getDescription()));
 
@@ -47,6 +49,33 @@ public class Dtos {
     return builder.build();
   }
 
+  public static Opal.TaxonomiesDto.TaxonomySummaryDto asVocabularySummaryDto(Taxonomy taxonomy) {
+    Opal.TaxonomiesDto.TaxonomySummaryDto.Builder builder = Opal.TaxonomiesDto.TaxonomySummaryDto.newBuilder();
+    builder.setName(taxonomy.getName());
+    builder.addAllTitle(toLocaleTextDtoList(taxonomy.getTitle()));
+
+    if(taxonomy.hasVocabularies()) {
+      builder.addAllVocabularySummaries(Iterables.transform(taxonomy.getVocabularies(),
+          new Function<Vocabulary, Opal.TaxonomiesDto.TaxonomySummaryDto.VocabularySummaryDto>() {
+            @Nullable
+            @Override
+            public Opal.TaxonomiesDto.TaxonomySummaryDto.VocabularySummaryDto apply(@Nullable Vocabulary input) {
+              return asSummaryDto(input);
+            }
+          }));
+    }
+
+    return builder.build();
+  }
+
+  private static Opal.TaxonomiesDto.TaxonomySummaryDto.VocabularySummaryDto asSummaryDto(Vocabulary vocabulary){
+    Opal.TaxonomiesDto.TaxonomySummaryDto.VocabularySummaryDto.Builder builder
+        = Opal.TaxonomiesDto.TaxonomySummaryDto.VocabularySummaryDto.newBuilder();
+    builder.setName(vocabulary.getName());
+    builder.addAllTitle(toLocaleTextDtoList(vocabulary.getTitle()));
+    return builder.build();
+  }
+
   private static Iterable<? extends Opal.LocaleTextDto> toLocaleTextDtoList(Map<String, String> map) {
     Collection<Opal.LocaleTextDto> localeTexts = new ArrayList<>();
 
@@ -61,11 +90,15 @@ public class Dtos {
 
   public static Taxonomy fromDto(Opal.TaxonomyDto dto) {
     Taxonomy taxonomy = new Taxonomy(dto.getName());
+    if (dto.hasAuthor()) taxonomy.setAuthor(dto.getAuthor());
+    if (dto.hasLicense()) taxonomy.setLicense(dto.getLicense());
     taxonomy.setTitle(fromLocaleTextDtoList(dto.getTitleList()));
     taxonomy.setDescription(fromLocaleTextDtoList(dto.getDescriptionList()));
 
     for(Opal.VocabularyDto vocabulary : dto.getVocabulariesList()) {
-      taxonomy.addVocabulary(fromDto(vocabulary));
+      if (vocabulary.hasName()) {
+        taxonomy.addVocabulary(fromDto(vocabulary));
+      }
     }
 
     return taxonomy;
@@ -76,6 +109,7 @@ public class Dtos {
     builder.setName(term.getName());
     builder.addAllTitle(toLocaleTextDtoList(term.getTitle()));
     builder.addAllDescription(toLocaleTextDtoList(term.getDescription()));
+    if(term.hasTerms()) builder.addAllTerms(asDto(term.getTerms()));
     return builder.build();
   }
 
@@ -90,7 +124,9 @@ public class Dtos {
   private static List<Term> fromDto(Iterable<Opal.TermDto> termDtos) {
     List<Term> termDto = new ArrayList<>();
     for(Opal.TermDto t : termDtos) {
-      termDto.add(fromDto(t));
+      if (t.hasName()) {
+        termDto.add(fromDto(t));
+      }
     }
     return termDto;
   }
@@ -99,6 +135,7 @@ public class Dtos {
     Term term = new Term(from.getName());
     term.setTitle(fromLocaleTextDtoList(from.getTitleList()));
     term.setDescription(fromLocaleTextDtoList(from.getDescriptionList()));
+    term.setTerms(fromDto(from.getTermsList()));
     return term;
   }
 

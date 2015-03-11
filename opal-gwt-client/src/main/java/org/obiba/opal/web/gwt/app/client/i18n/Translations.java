@@ -103,7 +103,9 @@ public interface Translations extends Constants {
       "SUCCEEDED", "Succeeded", //
       "FAILED", "Failed", //
       "CANCEL_PENDING", "Cancel Pending", //
-      "CANCELED", "Cancelled" //
+      "CANCELED", "Cancelled", //
+      "WAITING", "Waiting", //
+      "BUSY", "Busy" //
   })
   Map<String, String> statusMap();
 
@@ -133,7 +135,8 @@ public interface Translations extends Constants {
       "Disable", "Disable",//
       "Generate identifiers", "Generate identifiers",//
       "Download identifiers", "Download identifiers",//
-      "Unregister", "Unregister"//
+      "Unregister", "Unregister", //
+      "Terminate", "Terminate" //
   })
   Map<String, String> actionMap();
 
@@ -310,6 +313,7 @@ public interface Translations extends Constants {
       "VariableNameNotUnique", "The specified variable name already exists.", //
       "jobCancelled", "Job cancelled.", //
       "jobDeleted", "Job removed.", //
+      "rSessionTerminated", "R session terminated.", //
       "completedJobsDeleted", "All completed jobs removed.", //
       "SetCommandStatus_NotFound", "Job could not be cancelled (not found).", //
       "SetCommandStatus_BadRequest_IllegalStatus", "Job status cannot be set to the specified value.", //
@@ -573,9 +577,11 @@ public interface Translations extends Constants {
       "CannotCopyAllTablesWithinProject", "This action would be applied to all tables. You cannot copy multiple " +
       "tables within the same project. Copy each table individually or create a new project.",//
       "IdentifierMappingFailed", "Identifiers mapping failed : {0}.",//
-      "TaxonomyNotFound", "No such taxonomy with name: {0}.",
-      "VocabularyNotFound", "No such vocabulary in taxonomy '{0}' with name: {1}.",
-      "TermNotFound", "No such term in taxonomy '{0}' and vocabulary '{1}' with name: {2}."
+      "TaxonomyNotFound", "No such taxonomy with name: {0}.", //
+      "VocabularyNotFound", "No such vocabulary in taxonomy '{0}' with name: {1}.", //
+      "TermNotFound", "No such term in taxonomy '{0}' and vocabulary '{1}' with name: {2}.", //
+      "IllegalArgument", "{0}" //
+
   })
   Map<String, String> userMessageMap();
 
@@ -1355,6 +1361,10 @@ public interface Translations extends Constants {
   @Description("Last Update label")
   @DefaultStringValue("Last updated")
   String lastUpdatedLabel();
+
+  @Description("Last Access label")
+  @DefaultStringValue("Last access")
+  String lastAccessLabel();
 
   @Description("Table last update")
   @DefaultStringValue("Table last update")

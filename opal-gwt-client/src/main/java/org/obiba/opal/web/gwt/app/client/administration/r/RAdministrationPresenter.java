@@ -2,6 +2,7 @@ package org.obiba.opal.web.gwt.app.client.administration.r;
 
 import org.obiba.opal.web.gwt.app.client.administration.presenter.ItemAdministrationPresenter;
 import org.obiba.opal.web.gwt.app.client.administration.presenter.RequestAdministrationPermissionEvent;
+import org.obiba.opal.web.gwt.app.client.administration.r.list.RSessionsPresenter;
 import org.obiba.opal.web.gwt.app.client.event.NotificationEvent;
 import org.obiba.opal.web.gwt.app.client.permissions.presenter.ResourcePermissionsPresenter;
 import org.obiba.opal.web.gwt.app.client.permissions.support.AclRequest;
@@ -18,6 +19,7 @@ import org.obiba.opal.web.gwt.rest.client.authorization.CompositeAuthorizer;
 import org.obiba.opal.web.gwt.rest.client.authorization.HasAuthorization;
 import org.obiba.opal.web.model.client.opal.ServiceDto;
 import org.obiba.opal.web.model.client.opal.ServiceStatus;
+import org.obiba.opal.web.model.client.opal.r.RSessionDto;
 
 import com.google.gwt.http.client.Request;
 import com.google.gwt.http.client.Response;
@@ -39,14 +41,18 @@ public class RAdministrationPresenter
     extends ItemAdministrationPresenter<RAdministrationPresenter.Display, RAdministrationPresenter.Proxy>
     implements RAdministrationUiHandlers {
 
+  private final RSessionsPresenter rSessionsPresenter;
+
   private final Provider<ResourcePermissionsPresenter> resourcePermissionsProvider;
 
   private final DefaultBreadcrumbsBuilder breadcrumbsHelper;
 
   @Inject
   public RAdministrationPresenter(Display display, EventBus eventBus, Proxy proxy,
+      RSessionsPresenter rSessionsPresenter,
       Provider<ResourcePermissionsPresenter> resourcePermissionsProvider, DefaultBreadcrumbsBuilder breadcrumbsHelper) {
     super(eventBus, display, proxy);
+    this.rSessionsPresenter = rSessionsPresenter;
     this.resourcePermissionsProvider = resourcePermissionsProvider;
     this.breadcrumbsHelper = breadcrumbsHelper;
     getView().setUiHandlers(this);
@@ -67,6 +73,11 @@ public class RAdministrationPresenter
   @TitleFunction
   public String getTitle() {
     return translations.pageRConfigTitle();
+  }
+
+  @Override
+  protected void onBind() {
+    setInSlot(Display.Slots.RSessions, rSessionsPresenter);
   }
 
   @Override
@@ -128,8 +139,8 @@ public class RAdministrationPresenter
 
   @Override
   public void test() {
-    ResourceRequestBuilderFactory.newBuilder().forResource("/r/sessions").post()//
-        .withCallback(Response.SC_CREATED, new RSessionCreatedCallback())//
+    ResourceRequestBuilderFactory.<RSessionDto>newBuilder().forResource("/r/sessions").post()//
+        .withCallback(new RSessionCreatedCallback())//
         .withCallback(SC_INTERNAL_SERVER_ERROR, new RConnectionFailedCallback()).send();
   }
 
@@ -140,12 +151,13 @@ public class RAdministrationPresenter
         .send();
   }
 
-  private final class RSessionCreatedCallback implements ResponseCodeCallback {
+  private final class RSessionCreatedCallback implements ResourceCallback<RSessionDto> {
+
     @Override
-    public void onResponseCode(Request request, Response response) {
+    public void onResource(Response response, RSessionDto resource) {
       fireEvent(NotificationEvent.newBuilder().info("RIsAlive").build());
       ResourceRequestBuilderFactory.newBuilder() //
-          .forResource("/r/session/current") //
+          .forResource("/r/session/" + resource.getId()) //
           .withCallback(ResponseCodeCallback.NO_OP, SC_OK, SC_INTERNAL_SERVER_ERROR) //
           .delete().send();
     }
@@ -189,6 +201,7 @@ public class RAdministrationPresenter
   public interface Display extends View, HasBreadcrumbs, HasUiHandlers<RAdministrationUiHandlers> {
 
     enum Slots {
+      RSessions,
       Permissions
     }
 
