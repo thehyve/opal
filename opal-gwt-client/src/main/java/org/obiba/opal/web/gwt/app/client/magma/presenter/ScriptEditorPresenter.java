@@ -149,6 +149,7 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
         derived.setValueType(getValueEntityType().getLabel());
         derived.setIsRepeatable(isRepeatable());
         script = getScript();
+        derived.setCategoriesArray(getCategories());
       } else {
         derived.setValueType(ValueType.TEXT.getLabel());
         derived.setIsRepeatable(false);
@@ -156,7 +157,6 @@ public class ScriptEditorPresenter extends PresenterWidget<ScriptEditorPresenter
       }
 
       VariableDtos.setScript(derived, script);
-      derived.setCategoriesArray(getCategories());
       return derived;
     }
   }
