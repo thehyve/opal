@@ -2,7 +2,7 @@
 
 [main]
 #url to the opal server
-url = http://localhost:8080
+url = https://localhost:8443
 
 #username
 user = administrator
