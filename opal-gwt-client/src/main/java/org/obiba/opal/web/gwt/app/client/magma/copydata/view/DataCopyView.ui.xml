@@ -40,6 +40,20 @@
         </b:HelpBlock>
       </b:ControlGroup>
 
+      <!--Query-->
+      <b:ControlGroup ui:field="queryPanel" visible="false">
+        <b:ControlLabel>
+          <ui:msg description="Values Filter field">Values Filter</ui:msg>
+        </b:ControlLabel>
+        <b:CheckBox ui:field="applyQuery" value="true">
+          <ui:msg description="Apply Query label">apply query</ui:msg>:
+        </b:CheckBox>
+        <b:CodeBlock ui:field="queryLabel"/>
+        <b:HelpBlock>
+          <ui:msg description="Copy Query help">Only copy entities which values match this query.</ui:msg>
+        </b:HelpBlock>
+      </b:ControlGroup>
+
       <o:CollapsiblePanel>
         <g:FlowPanel>
           <b:CheckBox ui:field="incremental">

@@ -37,6 +37,7 @@ import org.obiba.opal.web.gwt.app.client.js.JsArrays;
 import org.obiba.opal.web.gwt.app.client.magma.copydata.presenter.DataCopyPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.event.TableIndexStatusRefreshEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.TableSelectionChangeEvent;
+import org.obiba.opal.web.gwt.app.client.magma.event.ValuesQueryEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.VariableRefreshEvent;
 import org.obiba.opal.web.gwt.app.client.magma.exportdata.presenter.DataExportPresenter;
 import org.obiba.opal.web.gwt.app.client.magma.table.presenter.TablePropertiesModalPresenter;
@@ -135,6 +136,10 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
   private Timer indexProgressTimer;
 
   private String variableFilter;
+
+  private String valuesFilter;
+
+  private String valuesFilterText;
 
   /**
    * @param display
@@ -243,6 +248,14 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
 
     // Delete variables confirmation handler
     addRegisteredHandler(ConfirmationEvent.getType(), new DeleteVariableConfirmationEventHandler());
+
+    addRegisteredHandler(ValuesQueryEvent.getType(), new ValuesQueryEvent.ValuesQueryHandler() {
+      @Override
+      public void onValuesQuery(ValuesQueryEvent event) {
+        valuesFilter = event.getQuery();
+        valuesFilterText = event.getText();
+      }
+    });
   }
 
   private String getIndexResource(String datasource, String tableName) {
@@ -372,6 +385,8 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     }
 
     variableFilter = "";
+    valuesFilter = null;
+    valuesFilterText = "";
     updateVariables();
     updateTableIndexStatus();
     authorize();
@@ -466,20 +481,22 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
 
   @Override
   public void onExportData() {
-    DataExportPresenter export = dataExportModalProvider.get();
+    DataExportPresenter provider = dataExportModalProvider.get();
     Set<TableDto> tables = new HashSet<>();
     tables.add(table);
-    export.setExportTables(tables, false);
-    export.setDatasourceName(table.getDatasourceName());
+    provider.setExportTables(tables, false);
+    provider.setDatasourceName(table.getDatasourceName());
+    provider.setValuesQuery(valuesFilter, valuesFilterText);
   }
 
   @Override
   public void onCopyData() {
-    DataCopyPresenter copy = dataCopyModalProvider.get();
+    DataCopyPresenter provider = dataCopyModalProvider.get();
     Set<TableDto> copyTables = new HashSet<>();
     copyTables.add(table);
-    copy.setCopyTables(copyTables, false);
-    copy.setDatasourceName(table.getDatasourceName());
+    provider.setCopyTables(copyTables, false);
+    provider.setDatasourceName(table.getDatasourceName());
+    provider.setValuesQuery(valuesFilter, valuesFilterText);
   }
 
   @Override
@@ -712,7 +729,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     variableFilter = filter;
     if(Strings.isNullOrEmpty(filter)) {
       updateVariables();
-    } else if (filter.length() > 1) {
+    } else if(filter.length() > 1) {
       doFilterVariables();
     }
   }
@@ -725,7 +742,6 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
       updateDisplay(table);
     }
   }
-
 
   private void doFilterVariables() {
 
@@ -854,8 +870,6 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
   }
 
   public interface Display extends View, HasUiHandlers<TableUiHandlers> {
-
-
 
     enum Slots {
       Permissions, Values, ContingencyTable, Validation
@@ -1108,8 +1122,7 @@ public class TablePresenter extends PresenterWidget<TablePresenter.Display>
     public void onResource(Response response, VariableDto crossWithVariable) {
       // check cross variable is valid
       VariableDtos.VariableNature nature = VariableDtos.nature(crossWithVariable);
-      if(nature == VariableDtos.VariableNature.CATEGORICAL ||
-          nature == VariableDtos.VariableNature.CONTINUOUS) {
+      if(nature == VariableDtos.VariableNature.CATEGORICAL || nature == VariableDtos.VariableNature.CONTINUOUS) {
         ContingencyTablePresenter crossVariablePresenter = crossVariableProvider.get();
         crossVariablePresenter.initialize(table, variableDto, crossWithVariable);
         setInSlot(Display.Slots.ContingencyTable, crossVariablePresenter);
