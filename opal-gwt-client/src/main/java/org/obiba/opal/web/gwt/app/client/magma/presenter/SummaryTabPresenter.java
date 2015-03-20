@@ -9,6 +9,7 @@
  */
 package org.obiba.opal.web.gwt.app.client.magma.presenter;
 
+import com.google.gwt.core.client.JsArrayString;
 import com.google.gwt.core.client.JsonUtils;
 import com.google.gwt.http.client.Request;
 import com.google.gwt.http.client.Response;
@@ -20,6 +21,7 @@ import com.gwtplatform.mvp.client.HasUiHandlers;
 import com.gwtplatform.mvp.client.PresenterWidget;
 import com.gwtplatform.mvp.client.View;
 import org.obiba.opal.web.gwt.app.client.event.NotificationEvent;
+import org.obiba.opal.web.gwt.app.client.i18n.Translations;
 import org.obiba.opal.web.gwt.app.client.magma.event.SummaryReceivedEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.SummaryRequiredEvent;
 import org.obiba.opal.web.gwt.app.client.magma.event.VariableRefreshEvent;
@@ -59,10 +61,17 @@ public class SummaryTabPresenter extends PresenterWidget<SummaryTabPresenter.Dis
 
   private String table;
 
+  private final Translations translations;
+
+  private ClientErrorDto latestClientError; //latest client error received
+
+  private int currentErrorCount; //number of consecutive client errors that were equal to each other
+
   @Inject
-  public SummaryTabPresenter(EventBus eventBus, Display display) {
+  public SummaryTabPresenter(EventBus eventBus, Display display, Translations translations) {
     super(eventBus, display);
     getView().setUiHandlers(this);
+    this.translations = translations;
   }
 
   @Override
@@ -177,6 +186,8 @@ public class SummaryTabPresenter extends PresenterWidget<SummaryTabPresenter.Dis
 
   private void requestSummary() {
     if(resourceRequestBuilder == null) return;
+    if (blockSummaryRequests()) return;
+
     getView().requestingSummary(limit, entitiesCount);
     summaryRequest = resourceRequestBuilder //
         .withCallback(new ResourceCallback<SummaryStatisticsDto>() {
@@ -189,15 +200,50 @@ public class SummaryTabPresenter extends PresenterWidget<SummaryTabPresenter.Dis
           }
         })//
         .withCallback(Response.SC_BAD_REQUEST, new ResponseCodeCallback() {
-          @Override
-          public void onResponseCode(Request request, Response response) {
-            getView().renderNoSummary();
-            NotificationEvent notificationEvent = new JSErrorNotificationEventBuilder()
-                .build((ClientErrorDto) JsonUtils.unsafeEval(response.getText()));
-            getEventBus().fireEvent(notificationEvent);
-          }
+            @Override
+            public void onResponseCode(Request request, Response response) {
+                getView().renderNoSummary();
+                ClientErrorDto error = JsonUtils.unsafeEval(response.getText());
+                checkMessageFlooding(error);
+                NotificationEvent event;
+                if (blockSummaryRequests()) {
+                    onCancelSummary();
+                    event = NotificationEvent.newBuilder().error(translations.tooManyRepeatedErrorsLabel()).build();
+                } else {
+                    event = new JSErrorNotificationEventBuilder().build(error);
+                }
+                getEventBus().fireEvent(event);
+            }
         })//
         .send();
+  }
+
+  /**
+   * @return true if further summary requests should be blocked
+   */
+  private boolean blockSummaryRequests() {
+    return currentErrorCount >= 3;
+  }
+
+  /**
+   * Checks the given error for message flooding
+   * @param error client error to check
+   */
+  private void checkMessageFlooding(ClientErrorDto error) {
+    boolean match = false;
+
+    if (latestClientError != null && latestClientError.getStatus().equals(error.getStatus())) {
+      JsArrayString array1 = latestClientError.getArgumentsArray();
+      JsArrayString array2 = error.getArgumentsArray();
+      match = array1.toString().equals(array2.toString());
+    }
+
+    if (match) {
+      currentErrorCount++; //one more occurrence of the same error
+    } else {
+      latestClientError = error;
+      currentErrorCount = 0;
+    }
   }
 
   private void cancelPendingSummaryRequest() {
@@ -222,6 +268,10 @@ public class SummaryTabPresenter extends PresenterWidget<SummaryTabPresenter.Dis
     if(limit == entitiesCount) {
       limit = DEFAULT_LIMIT;
     }
+
+    //resetting the message flooding protection fields
+    latestClientError = null;
+    currentErrorCount = 0;
     onReset();
   }
 
