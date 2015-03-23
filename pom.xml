@@ -6,7 +6,7 @@
   <groupId>org.obiba.opal.sesi</groupId>
   <artifactId>opal</artifactId>
   <packaging>pom</packaging>
-  <version>2.5.9</version>
+  <version>2.5.10-SNAPSHOT</version>
 
   <name>opal</name>
   <description>Opal Application</description>
@@ -1717,7 +1717,7 @@
         <connection>scm:git:git://github.com/thehyve/opal.git</connection>
         <developerConnection>scm:git:https://github.com/thehyve/opal.git</developerConnection>
         <url>https://github.com/thehyve/opal</url>
-        <tag>opal-2.5.9</tag>
+        <tag>master</tag>
     </scm>
 
     <!--
