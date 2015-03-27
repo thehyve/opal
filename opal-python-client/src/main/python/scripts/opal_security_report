@@ -24,8 +24,8 @@ def get_data():
     group_permissions = dict()
 
     for tuple in tables:
-        user_permissions[tuple] = get_permissions(tuple[1], tuple[0], tuple[2], 'USER')
-        group_permissions[tuple] = get_permissions(tuple[1], tuple[0], tuple[2], 'GROUP')
+        user_permissions[tuple] = get_permissions(tuple[1], tuple[2], tuple[0], 'USER')
+        group_permissions[tuple] = get_permissions(tuple[1], tuple[2], tuple[0], 'GROUP')
 
     return (user_permissions, group_permissions)
 
