@@ -15,6 +15,7 @@ import org.obiba.magma.ValueSet;
 import org.obiba.magma.ValueTable;
 import org.obiba.magma.Variable;
 import org.obiba.magma.VariableEntity;
+import org.obiba.magma.datasource.csv.CsvValueTable;
 import org.obiba.opal.web.model.Magma;
 
 import com.google.common.base.Function;
@@ -65,7 +66,16 @@ public class VariableEntityValueSetDtoFunction implements Function<VariableEntit
       valueDtos.add(dto);
     }
 
-    return asDto(valueSet).addAllValues(valueDtos.build()) //
-        .setTimestamps(asDto(valueSet.getTimestamps())).build();
+    Magma.ValueSetsDto.ValueSetDto.Builder builder = asDto(valueSet)
+            .addAllValues(valueDtos.build()) //
+            .setTimestamps(asDto(valueSet.getTimestamps()));
+
+    if (valueTable instanceof CsvValueTable) {
+        CsvValueTable csv = (CsvValueTable)valueTable;
+        builder.setDuplicateIdCount(csv.getDuplicateIdCount());
+    }
+    //return asDto(valueSet).addAllValues(valueDtos.build()) //
+    //    .setTimestamps(asDto(valueSet.getTimestamps())).build();
+    return builder.build();
   }
 }

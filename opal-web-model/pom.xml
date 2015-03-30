@@ -16,6 +16,10 @@
       <artifactId>magma-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.obiba.magma</groupId>
+      <artifactId>magma-datasource-csv</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.obiba.opal.sesi</groupId>
       <artifactId>opal-core-api</artifactId>
     </dependency>
