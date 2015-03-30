@@ -100,10 +100,13 @@ def assemble_report_data(files, regex, filter, transformer, processor):
 
 def report(data, template_path, output_path):
 
-    print('')
-    print("Start date: {0}".format(data['min_date']))
-    print("End date: {0}".format(data['max_date']))
-    print('')
+    if (len(data['elements']) > 0):
+        print('')
+        print("Start date: {0}".format(data['min_date']))
+        print("End date: {0}".format(data['max_date']))
+        print('')
+    else
+        print('No matching accesses')
 
     for e in data['elements']:
         print("{0}\t{1}.{2}\t{3}".format(e['username'], e['datasource'], e['table'], e['datetime']))
