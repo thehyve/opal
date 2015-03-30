@@ -95,7 +95,7 @@
 
       <o:OpalSimplePager ui:field="pager" showTotalWhenNoPager="true" location="RIGHT" addStyleNames="pull-right"/>
     </g:FlowPanel>
-
+    <g:FlowPanel ui:field="warningsPanel" visible="false"/>
     <o:Table ui:field="valuesTable" addStyleNames="small-top-margin"/>
   </g:FlowPanel>
 
