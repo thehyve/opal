@@ -13,11 +13,13 @@ import java.util.AbstractList;
 import java.util.List;
 
 import org.obiba.opal.web.gwt.app.client.i18n.Translations;
+import org.obiba.opal.web.gwt.app.client.i18n.TranslationsUtils;
 import org.obiba.opal.web.gwt.app.client.js.JsArrays;
 import org.obiba.opal.web.gwt.app.client.magma.presenter.ValuesTablePresenter;
 import org.obiba.opal.web.gwt.app.client.magma.presenter.ValuesTablePresenter.DataFetcher;
 import org.obiba.opal.web.gwt.app.client.magma.presenter.ValuesTablePresenter.EntitySelectionHandler;
 import org.obiba.opal.web.gwt.app.client.magma.presenter.ValuesTableUiHandlers;
+import org.obiba.opal.web.gwt.app.client.ui.AlertPanel;
 import org.obiba.opal.web.gwt.app.client.ui.CollapsiblePanel;
 import org.obiba.opal.web.gwt.app.client.ui.CriteriaPanel;
 import org.obiba.opal.web.gwt.app.client.ui.CriterionDropdown;
@@ -32,6 +34,7 @@ import org.obiba.opal.web.gwt.app.client.ui.celltable.IconActionCell;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.IconActionCell.Delegate;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.ValueColumn;
 import org.obiba.opal.web.gwt.app.client.ui.celltable.ValueColumn.ValueSelectionHandler;
+import org.obiba.opal.web.model.client.magma.DatasourceParsingErrorDto;
 import org.obiba.opal.web.model.client.magma.TableDto;
 import org.obiba.opal.web.model.client.magma.ValueSetsDto;
 import org.obiba.opal.web.model.client.magma.ValueSetsDto.ValueSetDto;
@@ -146,6 +149,9 @@ public class ValuesTableView extends ViewWithUiHandlers<ValuesTableUiHandlers> i
 
   @UiField
   ControlGroup searchIdentifierGroup;
+
+  @UiField
+  FlowPanel warningsPanel;
 
   private ValueSetsDataProvider dataProvider;
 
@@ -772,12 +778,29 @@ public class ValuesTableView extends ViewWithUiHandlers<ValuesTableUiHandlers> i
     @Override
     public void populateValues(int offset, ValueSetsDto valueSets) {
       setRefreshing(false);
+        checkWarnings(valueSets);
 
       listValueSetVariable = JsArrays.toList(valueSets.getVariablesArray());
       updateRowData(offset, JsArrays.toList(valueSets.getValueSetsArray()));
 
       valuesTable.setVisibleRange(offset, getPageSize());
     }
+  }
+
+  private void checkWarnings(ValueSetsDto valueSets) {
+      warningsPanel.clear();
+      int duplicateIdCount = valueSets.getDuplicateIdCount();
+      if (duplicateIdCount > 0) {
+          AlertPanel.Builder builder = AlertPanel.newBuilder().error();
+          builder.warning(getDuplicateIdsMessage(duplicateIdCount));
+          warningsPanel.add(builder.build());
+      }
+      warningsPanel.setVisible(duplicateIdCount > 0);
+  }
+
+  private String getDuplicateIdsMessage(int count) {
+      return TranslationsUtils.replaceArguments(
+              translations.duplicateIdsWarningMessage(), String.valueOf(count));
   }
 
   private final class VariableValueSelectionHandler implements ValueSelectionHandler {

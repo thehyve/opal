@@ -28,6 +28,7 @@ import org.obiba.magma.Variable;
 import org.obiba.magma.VariableEntity;
 import org.obiba.magma.VariableValueSource;
 import org.obiba.magma.VectorSource;
+import org.obiba.magma.datasource.csv.CsvValueTable;
 import org.obiba.magma.support.VariableEntityBean;
 import org.obiba.opal.web.TimestampedResponses;
 import org.obiba.opal.web.model.Magma.ValueSetsDto;
@@ -123,6 +124,11 @@ public class ValueSetsResourceImpl extends AbstractValueTableResource implements
     for(ValueSetDto dto : Iterables.transform(variableEntities,
         new VariableEntityValueSetDtoFunction(valueTable, variables, uriInfo.getPath(), filterBinary))) {
       valueSetDtoBuilder.add(dto);
+    }
+
+    if (valueTable instanceof CsvValueTable) {
+        CsvValueTable csv = (CsvValueTable)valueTable;
+        builder.setDuplicateIdCount(csv.getDuplicateIdCount());
     }
 
     builder.addAllValueSets(valueSetDtoBuilder.build());

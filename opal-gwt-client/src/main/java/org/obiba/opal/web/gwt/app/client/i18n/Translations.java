@@ -2361,4 +2361,8 @@ public interface Translations extends Constants {
     @DefaultStringValue("In progress...")
     String validationInProgress();
 
+    @Description("Duplicate ids message")
+    @DefaultStringValue("{0} duplicate id(s) found. The values of last row will prevail")
+    String duplicateIdsWarningMessage();
+
 }

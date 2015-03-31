@@ -232,6 +232,7 @@ message ValueSetsDto {
   repeated string variables = 1;
   repeated ValueSetDto valueSets = 2;
   required string entityType = 3;
+  optional int32 duplicateIdCount = 4;
 }
 
 message VariableEntityDto {
