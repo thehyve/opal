@@ -216,17 +216,31 @@ public class VariablePresenter extends PresenterWidget<VariablePresenter.Display
 
   private void updateDisplay(TableDto tableDto, VariableDto variableDto, @Nullable VariableDto previous,
       @Nullable VariableDto next) {
+
+    boolean sameTable = table != null && tableDto != null && table.getName().equals(tableDto.getName());
+    boolean sameVariable = variable != null && variableDto != null && variable.getName().equals(variableDto.getName());
+    boolean samePosition = sameTable && sameVariable;
+
     table = tableDto;
     variable = variableDto;
-    nextVariable = next;
-    previousVariable = previous;
+
+    if (!samePosition || next != null) {
+      //OPAL-2746 only clears 'nextVariable' if the positional context is different
+      nextVariable = next;
+    }
+
+    if (!samePosition || previous != null) {
+      //OPAL-2746 only clears 'previousVariable' if the positional context is different
+      previousVariable = previous;
+    }
 
     if(variable.getLink().isEmpty()) {
       variable.setLink(variable.getParentLink().getLink() + "/variable/" + variable.getName());
     }
     updateVariableDisplay(variableDto);
-    updateMenuDisplay(previous, next);
-    updateDerivedVariableDisplay();
+    updateMenuDisplay(previousVariable, nextVariable); //OPAL-2746 uses the current previousVariable/nextVariable
+
+      updateDerivedVariableDisplay();
     updateValuesDisplay();
 
     authorize();
