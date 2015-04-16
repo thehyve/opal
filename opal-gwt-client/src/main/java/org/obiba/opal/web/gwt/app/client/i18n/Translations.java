@@ -1589,7 +1589,7 @@ public interface Translations extends Constants {
   String pageAdministrationTitle();
 
   @Description("Page Dashboard title")
-  @DefaultStringValue("Modified Dashboard")
+  @DefaultStringValue("Dashboard")
   String pageDashboardTitle();
 
   @Description("Page Databases title")
