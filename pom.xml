@@ -42,7 +42,7 @@
     <module>opal-datashield</module>
     <module>opal-search</module>
     <module>opal-upgrade</module>
-    <module>opal-vagrant</module>
+    <!--<module>opal-vagrant</module>-->
     <module>opal-pac4j</module>
   </modules>
 
