@@ -49,7 +49,8 @@ public class ProjectReportTemplateResourceTest {
 
   @Before
   public void before() {
-    new MagmaEngine();
+    //new MagmaEngine();
+MagmaEngine.get();
 
     reportTemplateService = mock(ReportTemplateService.class);
     reportTemplateScheduler = mock(ReportTemplateScheduler.class);
