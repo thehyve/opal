@@ -1,7 +1,7 @@
 class opal-rtools () {
-  yumrepo { "thehyve":
+  yumrepo { "cmi":
     baseurl   => "https://repo.thehyve.nl/content/repositories/releases",
-    descr     => "Hyve Releases Repository",
+    descr     => "CMI Releases Repository",
     enabled   => 1,
     gpgcheck  => 0
   } -> package { 'epel-release':
