@@ -19,7 +19,7 @@ yumrepo { "opal":
 yumrepo { "cmi":
 #baseurl   => "http://185.9.174.106:8081/nexus/content/groups/public",
   baseurl   => "http://185.9.174.106:8081/nexus/repositories/releases",
-  descr     => "Hyve Releases Repository",
+  descr     => "CMI Releases Repository",
   enabled   => 1,
   gpgcheck  => 0
 } -> package { 'epel-release':
