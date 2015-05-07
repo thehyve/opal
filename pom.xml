@@ -22,6 +22,7 @@
     </license>
   </licenses>
 
+
   <modules>
     <module>opal-core-api</module>
     <module>opal-core</module>
