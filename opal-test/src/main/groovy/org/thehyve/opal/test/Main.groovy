@@ -28,7 +28,8 @@ class Main {
         //testFacetQuery('testrobert','newview', 1415802930505L) //0
 
         //testFacetQueries()
-        testEidAuth()
+        //testEidAuth()
+        testConnectionFromMica()
     }
 
     static testEidAuth() {
@@ -50,6 +51,11 @@ class Main {
 
         Search.ValueSetsResultDto results = client.search("multitest","donour",null, null, query)
 
+    }
+
+    static void testConnectionFromMica() {
+        Search.QueryTermsDto query = Search.QueryTermsDto.newBuilder().build();
+        client.testFacetQuery('carlos','view', query)
     }
 
     static void testFacetQueries() {

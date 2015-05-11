@@ -121,8 +121,8 @@ class OpalRestClient {
     void testFacetQuery(String ds, String table, Search.QueryTermsDto query) {
         Search.QueryResultDto result = facetSearch(ds, table, query)
         println query
-        //println result.getTotalHits()
-        result.getFacets(0).filtersList.each { println it.count }
+        println result.getTotalHits()
+        //result.getFacets(0).filtersList.each { println it.count }
     }
 
     static Search.QueryTermsDto readQuery(long request) {

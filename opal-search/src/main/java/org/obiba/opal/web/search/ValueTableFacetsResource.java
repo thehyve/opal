@@ -15,6 +15,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
 import org.codehaus.jettison.json.JSONException;
+import org.obiba.opal.search.ValueTableValuesIndex;
 import org.obiba.opal.search.ValuesIndexManager;
 import org.obiba.opal.search.es.ElasticSearchProvider;
 import org.obiba.opal.web.model.Search;
@@ -60,7 +61,14 @@ public class ValueTableFacetsResource {
     try {
       IndexManagerHelper indexManagerHelper = new IndexManagerHelper(indexManager).setDatasource(datasource)
           .setTable(table);
+
       Search.QueryResultDto dtoResult = searchQueryFactory.create().execute(indexManagerHelper, dtoQueries);
+
+      if (dtoResult.getTotalHits() == 0 && !indexManagerHelper.getValueTableIndex().isUpToDate()) {
+          //not indexed: we want to force a connection failure on Mica (customer explicitly asked this)
+          return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("ObjectNotIndexed").build();
+      }
+
       return Response.ok().entity(dtoResult).build();
     } catch(UnsupportedOperationException e) {
       return Response.status(Response.Status.BAD_REQUEST).build();
