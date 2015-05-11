@@ -17,7 +17,7 @@
     <maven.compiler.source>1.7</maven.compiler.source>
     <maven.compiler.target>1.7</maven.compiler.target>
     <groovyVersion>2.3.2</groovyVersion>
-    <opalVersion>2.5.13-SNAPSHOT</opalVersion>
+    <opalVersion>2.5.15-SNAPSHOT</opalVersion>
   </properties>
 
   <dependencies>
