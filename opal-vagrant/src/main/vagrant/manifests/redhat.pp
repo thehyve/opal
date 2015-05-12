@@ -7,8 +7,8 @@ package { $packages:
 }
 
 yumrepo { "opal":
-  #baseurl   => "https://repo.thehyve.nl/content/groups/public",
-  baseurl   => "https://repo.thehyve.nl/content/repositories/snapshots",
+  #baseurl   => "http://185.9.174.106:8081/nexus/content/groups/public",
+  baseurl   => "http://185.9.174.106:8081/nexus/content/repositories/snapshots",
   descr     => "Opal Repository",
   enabled   => 1,
   gpgcheck  => 0
@@ -16,10 +16,10 @@ yumrepo { "opal":
   ensure    => latest,
 }
 
-yumrepo { "thehyve":
-#baseurl   => "https://repo.thehyve.nl/content/groups/public",
-  baseurl   => "https://repo.thehyve.nl/content/repositories/releases",
-  descr     => "Hyve Releases Repository",
+yumrepo { "cmi":
+  #baseurl   => "http://185.9.174.106:8081/nexus/content/groups/public",
+  baseurl   => "http://185.9.174.106:8081/nexus/repositories/releases",
+  descr     => "CMI Releases Repository",
   enabled   => 1,
   gpgcheck  => 0
 } -> package { 'epel-release':
