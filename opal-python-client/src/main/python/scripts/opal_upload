@@ -205,6 +205,8 @@ class OpalFile:
                                          .format(line[0], header[max_bin], self.name, reader.line_num))
                 for idx in binary_columns:
                     blob = line[idx]
+                    if not blob:
+                        continue #blob filename value is empty: skip it
                     # Don't re-upload a file if it was already uploaded
                     if blob in self.binary_files:
                         continue
